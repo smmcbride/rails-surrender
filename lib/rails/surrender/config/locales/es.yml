@@ -1,0 +1,18 @@
+---
+es:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: El/los parámetro(s) de paginación tienen un formato incorrecto
+        sort:
+          not_available: El parámetro de ordenación no es compatible con este recurso.
+          invalid_column: La columna de ordenación '%{a}' no es un parámetro de ordenación válido
+        include:
+          not_available: 'Parámetro: %{a} no está disponible para incluirse.'
+          invalid: 'Parámetro: %{a} no es válido.'
+          incorrect_format: El formato incorrecto incluye la solicitud '% {a}'
+        exclude:
+          not_available: 'Parámetro: %{a} no está disponible para excluir.'
+          invalid: 'Excluir Parámetro: %{a} no es válido.'
+          incorrect_format: Con formato incorrecto excluir a petición '%{a}'

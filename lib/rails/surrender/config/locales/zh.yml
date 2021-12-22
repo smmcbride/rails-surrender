@@ -1,0 +1,18 @@
+---
+zh:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: 分页参数的格式不正确
+        sort:
+          not_available: 本资源不支持分类参数。
+          invalid_column: 分类列'%{a}' 不是一个有效的排序参数
+        include:
+          not_available: 参数：%{a} 不可包括在内。
+          invalid: 参数：%{a} 是无效的。
+          incorrect_format: 格式错误的包括请求'%{a}'
+        exclude:
+          not_available: 参数：％{a} 不可排除。
+          invalid: 排除参数：％{a} 是无效的。
+          incorrect_format: 格式错误的排除请求 '％{a}'

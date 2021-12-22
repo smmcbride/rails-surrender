@@ -1,0 +1,18 @@
+---
+nl:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: Paginering parameter (s) onjuist opgemaakt
+        sort:
+          not_available: Het soort parameter wordt niet ondersteund op deze bron.
+          invalid_column: Het soort kolom '%{a}' is geen geldige soort parameter
+        include:
+          not_available: 'Parameter: %{a} is niet beschikbaar op te nemen.'
+          invalid: 'Parameter: %{a} is ongeldig.'
+          incorrect_format: Slecht opgemaakte omvatten verzoek '%{a}'
+        exclude:
+          not_available: 'Parameter: %{a} niet beschikbaar is uit te sluiten.'
+          invalid: 'Uitsluiten Parameter: %{a} is ongeldig.'
+          incorrect_format: Slecht opgemaakte exclusief verzoek '%{a}'

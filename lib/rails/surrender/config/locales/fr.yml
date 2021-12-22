@@ -1,0 +1,18 @@
+---
+fr:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: Paramètre(s) de pagination mal formaté
+        sort:
+          not_available: Le paramètre de tri n'est pas pris en charge sur cette ressource.
+          invalid_column: La colonne de tri '%{a}' est pas un paramètre de tri valide
+        include:
+          not_available: Le paramètre %{a} n'est pas disponible.
+          invalid: 'Le paramètre: %{a} est invalide.'
+          incorrect_format: La requête '%{a}' fiure parmi les requêtes mal formatées
+        exclude:
+          not_available: 'Paramètre: %{a} ne sont pas disponibles à exclure.'
+          invalid: 'Exclure paramètre: %{a} est invalide.'
+          incorrect_format: Mal formaté demande exclure '%{a}'

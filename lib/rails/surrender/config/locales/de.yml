@@ -1,0 +1,18 @@
+---
+de:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: Paginierungsparameter falsch formatiert
+        sort:
+          not_available: Der Sortier-Parameter wird für diese Ressource nicht unterstützt.
+          invalid_column: Die Sortierspalte '%{a}' ist kein gültiger Sortierparameter
+        include:
+          not_available: 'Parameter: %{a} ist zum Einbinden nicht verfügbar.'
+          invalid: 'Parameter: %{a} ist ungültig.'
+          incorrect_format: Falsch formatierte Einbindungsanfrage '%{a}'
+        exclude:
+          not_available: 'Parameter: %{a} ist nicht verfügbar auszuschließen.'
+          invalid: 'Ausschließen Parameter: %{a} ist ungültig.'
+          incorrect_format: Badly ausschließen Anfrage '%{a}' formatiert

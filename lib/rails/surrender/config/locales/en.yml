@@ -1,0 +1,20 @@
+---
+en:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: Pagination parameter(s) incorrectly formatted
+        sort:
+          not_available: The sort parameter is not supported on this resource.
+          invalid_column: The sort column %{a} is not a valid sort parameter
+        include:
+          not_available: Parameter %{a} is not available to include.
+          invalid: Include parameter %{a} is invalid.
+          incorrect_format: Badly formatted include request '%{a}'
+        exclude:
+          not_available: Parameter %{a} is not available to exclude.
+          invalid: Exclude parameter %{a} is invalid.
+          incorrect_format: Badly formatted exclude request '%{a}'
+        filter:
+          not_available: Parameter %{a} is not available for filtering.

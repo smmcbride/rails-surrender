@@ -1,0 +1,18 @@
+---
+pt:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: parâmetro (s) de paginação formatado incorretamente
+        sort:
+          not_available: O parâmetro de classificação não é compatível com este recurso.
+          invalid_column: A coluna de classificação '%{a}' não é um parâmetro de classificação válido
+        include:
+          not_available: 'Parâmetro: %{a} não está disponível para incluir.'
+          invalid: 'Parâmetro: %{a} é inválido.'
+          incorrect_format: Mal formatado incluem pedido '%{a}'
+        exclude:
+          not_available: 'Parâmetro: %{a} não está disponível para excluir.'
+          invalid: 'Excluir Parâmetro: %{a} é inválido.'
+          incorrect_format: Mal formatado excluir pedido '%{a}'

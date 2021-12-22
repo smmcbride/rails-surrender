@@ -1,0 +1,18 @@
+---
+it:
+  surrender:
+    error:
+      query_string:
+        pagination:
+          invalid: Uno o più parametri di formattazione sono stati formattati in modo errato
+        sort:
+          not_available: Il parametro tipo non è supportato su questa risorsa.
+          invalid_column: La colonna di ordinamento '%{a}' non è un parametro di ordinamento valido
+        include:
+          not_available: 'Parametro: %{a} non è disponibile per l''inclusione.'
+          invalid: 'Parametro: %{a} non è valido.'
+          incorrect_format: La richiesta di formattazione '%{a}' è stata formulata in modo errato
+        exclude:
+          not_available: 'Parametro: %{a} non è disponibile da escludere.'
+          invalid: 'Escludere Parametro: %{a} non è valido.'
+          incorrect_format: Badly formattato escludere richiesta '%{a}'
