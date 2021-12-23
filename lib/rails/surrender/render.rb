@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Rails
   module Surrender
     class Render
@@ -21,7 +23,10 @@ module Rails
             # Reloading the instance here allows us to take advantage of the eager loading
             # capabilities of ActiveRecord with our 'includer' hash to prevent N+1 queries.
             # This can save a TON of response time when the data sets begin to get large.
-            source = source.class.includes(includer).find_by_id(source.id) unless render_control[:reload_resource] == false
+            unless render_control[:reload_resource] == false
+              source = source.class.includes(includer).find_by_id(source.id)
+            end
+
             render_instance(source, render_control)
           end
 
@@ -33,35 +38,67 @@ module Rails
 
       def self.includer(source_class, *args)
         opts = args.extract_options!
-        history      = (opts.has_key?(:history) ? opts[:history] : []).dup.push source_class
-        user_include = opts.has_key?(:user_include) ? opts[:user_include] : []
-        user_exclude = opts.has_key?(:user_exclude) ? opts[:user_exclude] : []
-        ctrl_include = opts.has_key?(:ctrl_include) ? opts[:ctrl_include] : []
-        ctrl_exclude = opts.has_key?(:ctrl_exclude) ? opts[:ctrl_exclude] : []
+        history      = (opts.key?(:history) ? opts[:history] : []).dup.push source_class
+        user_include = opts.key?(:user_include) ? opts[:user_include] : []
+        user_exclude = opts.key?(:user_exclude) ? opts[:user_exclude] : []
+        ctrl_include = opts.key?(:ctrl_include) ? opts[:ctrl_include] : []
+        ctrl_exclude = opts.key?(:ctrl_exclude) ? opts[:ctrl_exclude] : []
 
         ctrl_exclude.reject!(&:nil?)
         user_exclude.reject!(&:nil?)
         ctrl_exclude_here = ctrl_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
         user_exclude_here = user_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-        ctrl_exclude_next = ctrl_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
-        user_exclude_next = user_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
-
-        user_include_here = user_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq.select { |z| source_class.reflections.has_key? z.to_s }.map { |e| { name: e, class: source_class.reflections[e.to_s].klass } }
-        ctrl_include_here = ctrl_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq.select { |z| source_class.reflections.has_key? z.to_s }.map { |e| { name: e, class: source_class.reflections[e.to_s].klass } }
-        user_include_next = user_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
-        ctrl_include_next = ctrl_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
+        ctrl_exclude_next = ctrl_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .reduce({}, :merge)
+                                        .symbolize_keys
+        user_exclude_next = user_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .reduce({}, :merge)
+                                        .symbolize_keys
+        user_include_here = user_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .map(&:to_sym)
+                                        .uniq
+                                        .select { |z| source_class.reflections.key? z.to_s }
+                                        .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } }
+        ctrl_include_here = ctrl_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .map(&:to_sym)
+                                        .uniq
+                                        .select { |z| source_class.reflections.key? z.to_s }
+                                        .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } }
+        user_include_next = user_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .reduce({}, :merge)
+                                        .symbolize_keys
+        ctrl_include_next = ctrl_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .reduce({}, :merge)
+                                        .symbolize_keys
 
         includes = []
         list = user_include_here +
-          ctrl_include_here +
-          source_class.surrender_attributes.select { |x| x.match /_ids$/ }.map { |y| y.to_s.sub('_ids', '').pluralize }.select { |x| x.in? source_class.reflections.keys }.map { |e| { name: e, class: source_class.reflections[e.to_s].klass } } +
-          source_class.surrender_expands.map { |e| { name: e, class: source_class.reflections[e.to_s].klass } } +
-          source_class.subclasses.map { |sc| sc.surrender_attributes.select { |x| x.match /_ids$/ }.map { |y| y.to_s.sub('_ids', '').pluralize }.select { |x| x.in? sc.reflections.keys }.map { |e| { name: e, class: sc.reflections[e.to_s].klass } } } +
-          source_class.subclasses.map { |sc| sc.surrender_expands.map { |e| { name: e, class: sc.reflections[e.to_s].klass } } }
+               ctrl_include_here +
+               source_class.surrender_attributes
+                           .select { |x| x.match /_ids$/ }
+                           .map { |y| y.to_s.sub('_ids', '').pluralize }
+                           .select { |z| z.in? source_class.reflections.keys }
+                           .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } } +
+               source_class.surrender_expands
+                           .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } } +
+               source_class.subclasses
+                           .map do |sc|
+                               sc.surrender_attributes
+                                 .select { |x| x.match /_ids$/ }
+                                 .map { |y| y.to_s.sub('_ids', '').pluralize }
+                                 .select { |z| z.in? sc.reflections.keys }
+                                 .map { |e| { name: e, class: sc.reflections[e.to_s].klass } }
+               end +
+               source_class.subclasses
+                           .map do |sc|
+                   sc.surrender_expands.map { |e| { name: e, class: sc.reflections[e.to_s].klass } }
+               end
         list.flatten!
         list.uniq!
         list.reject! do |x|
-          x[:class].in?(history) || x[:name].in?(user_exclude_here) || (x[:name].in?(ctrl_exclude_here) && !x[:name].in?(user_include_here.map { |k| k[:name] }))
+          x[:class].in?(history) ||
+            x[:name].in?(user_exclude_here) ||
+            (x[:name].in?(ctrl_exclude_here) && !x[:name].in?(user_include_here.map { |k| k[:name] }))
         end
 
         list.each do |item|
@@ -77,10 +114,10 @@ module Rails
             history: history.dup.push(resource_class)
           )
 
-          if nested.size > 0
-            includes <<  { exp => nested }
-          else
+          if nested.size.zero?
             includes << exp
+          else
+            includes << { exp => nested }
           end
         end
         includes.sort_by { |x| x.is_a?(Symbol) ? 0 : 1 }
@@ -88,6 +125,7 @@ module Rails
 
       def self.render_collection(source, *args)
         return nil if source.nil?
+
         source.map { |x| render_instance(x, *args) }
       end
 
@@ -97,13 +135,13 @@ module Rails
         resource_class = source.class
 
         opts = args.extract_options!
-        history       = opts.has_key?(:history)      ? opts[:history]      : []
-        user_include  = opts.has_key?(:user_include) ? opts[:user_include] : []
-        user_exclude  = opts.has_key?(:user_exclude) ? opts[:user_exclude] : []
-        ctrl_include  = opts.has_key?(:ctrl_include) ? opts[:ctrl_include] : []
-        ctrl_exclude  = opts.has_key?(:ctrl_exclude) ? opts[:ctrl_exclude] : []
+        history       = opts.key?(:history)      ? opts[:history]      : []
+        user_include  = opts.key?(:user_include) ? opts[:user_include] : []
+        user_exclude  = opts.key?(:user_exclude) ? opts[:user_exclude] : []
+        ctrl_include  = opts.key?(:ctrl_include) ? opts[:ctrl_include] : []
+        ctrl_exclude  = opts.key?(:ctrl_exclude) ? opts[:ctrl_exclude] : []
 
-        class_exclude = opts.has_key?(:class_exclude) ? opts[:class_exclude] : []
+        class_exclude = opts.key?(:class_exclude) ? opts[:class_exclude] : []
         class_exclude.push(resource_class.surrender_skip_expands.dup).flatten!.uniq!
 
         # get to the root subclass for sti models and store that as history
@@ -116,17 +154,26 @@ module Rails
 
         user_include_here = user_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq
 
-        # ctrl_include(here/next) are generally covered by the ctrl_include loop below, so I don't think they're needed here...
-        ctrl_include_here = ctrl_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq
-        ctrl_include_next = ctrl_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
+        # ctrl_include(here/next) are generally covered by the ctrl_include loop below,
+        # so I don't think they're needed here...
+        _ctrl_include_here = ctrl_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq
+        _ctrl_include_next = ctrl_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                         .reduce({}, :merge)
+                                         .symbolize_keys
 
         # handle expands that we want to skip
         ctrl_exclude_here = ctrl_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-        ctrl_exclude_next = ctrl_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
+        ctrl_exclude_next = ctrl_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .reduce({}, :merge)
+                                        .symbolize_keys
         user_exclude_here = user_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-        user_exclude_next = user_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
+        user_exclude_next = user_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                        .reduce({}, :merge)
+                                        .symbolize_keys
         class_exclude_here = class_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-        class_exclude_next = class_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
+        class_exclude_next = class_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
+                                          .reduce({}, :merge)
+                                          .symbolize_keys
         exclude_here = ctrl_exclude_here.dup.push(user_exclude_here).push(class_exclude_here).flatten.uniq
 
         included_attrs   = []
@@ -137,16 +184,18 @@ module Rails
           when String, Symbol # individual attribute, or association
             if resource_class.reflections.keys.include? i.to_s
               unless resource_class.can_call_expand? i.to_sym
-                raise Error, key: 'surrender.error.query_string.include.not_available', params: { a: i }
+                raise Error, I18n.t('surrender.error.query_string.include.not_available', params: { a: i })
               end
+
               included_expands << i.to_sym
             elsif resource_class.attribute_names.include?(i) || resource_class.instance_methods.include?(i.to_sym)
               unless resource_class.can_call_attribute? i.to_sym
-                raise Error, key: 'surrender.error.query_string.include.not_available', params: { a: i }
+                raise Error, I18n.t('surrender.error.query_string.include.not_available', params: { a: i })
               end
+
               included_attrs << i.to_sym
             else
-              raise Error, key: 'surrender.error.query_string.include.invalid', params: { a: i }
+              raise Error, I18n.t('surrender.error.query_string.include.invalid', params: { a: i })
             end
           when Hash # expanded attribute with inner details
             included_expands << i
@@ -174,7 +223,9 @@ module Rails
         included_attrs.push(resource_class.surrender_attributes).flatten!.uniq!
 
         # MINUS excluded attributes
-        included_attrs.reject! { |x| x.in?(user_exclude_here) || (x.in?(ctrl_exclude_here) && !x.in?(user_include_here)) }
+        included_attrs.reject! do |attr|
+          attr.in?(user_exclude_here) || (attr.in?(ctrl_exclude_here) && !attr.in?(user_include_here))
+        end
 
         included_attrs.each do |a|
           result[a.to_sym] = source.send(a)
@@ -183,7 +234,11 @@ module Rails
         expandings = included_expands
         resource_class.surrender_expands.each do |exp|
           # add the class expnsions unless the expandings already has a more complex expansion request with this key
-          expandings << exp unless expandings.select { |a| a.is_a? Hash }.map(&:keys).flatten.map(&:to_sym).include? exp.to_sym
+          expandings << exp unless expandings.select { |a| a.is_a? Hash }
+                                             .map(&:keys)
+                                             .flatten
+                                             .map(&:to_sym)
+                                             .include? exp.to_sym
         end
 
         expandings.each do |e|
@@ -218,6 +273,7 @@ module Rails
             else
               instance = source.send(key)
               next if class_history.include? instance.class
+
               if @ability.can?(:read, instance)
                 result[key.to_sym] = render_instance(
                   instance,

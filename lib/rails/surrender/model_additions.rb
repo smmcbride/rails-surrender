@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Rails
   module Surrender
     module ModelAdditions
@@ -7,6 +9,7 @@ module Rails
         attr_accessor :surrender_skip_expands
         attr_accessor :surrender_available_attributes
         attr_accessor :surrender_available_expands
+
         base.extend(ClassMethods)
       end
 
@@ -19,14 +22,16 @@ module Rails
           %w(attributes expands skip_expands available_attributes available_expands).each do |attr|
             surrender_attr = ['surrender', attr].join('_')
             list = []
-            list << superclass.instance_variable_get("@#{surrender_attr}") if superclass.instance_variable_defined?("@#{surrender_attr}")
-            list << opts[attr.to_sym] if opts.has_key?(attr.to_sym)
+            if superclass.instance_variable_defined?("@#{surrender_attr}")
+              list << superclass.instance_variable_get("@#{surrender_attr}")
+            end
+            list << opts[attr.to_sym] if opts.key?(attr.to_sym)
             instance_variable_set("@#{surrender_attr}", list.flatten.uniq)
           end
         end
 
         def surrender_attributes
-          @surrender_attributes ||= [:id, :created_at]
+          @surrender_attributes ||= %i[id created_at]
         end
 
         def surrender_available_attributes
@@ -60,7 +65,6 @@ module Rails
         def available_response_fields
           [@surrender_available_attributes.dup << @surrender_available_expands].flatten.join(', ')
         end
-
       end
     end
   end
@@ -73,28 +77,26 @@ class ActiveRecord::Base
 
     # Bad things happen if you ask table_exists? to ApplicationRecord while it's loading!
     # TODO: Add configuration in case ApplicationRecord is _not_ the primary abstract class
-    return if child.name=='ApplicationRecord'
+    return if child.name == 'ApplicationRecord'
 
-    return  unless child.table_exists?
+    return unless child.table_exists?
+
     child.instance_eval do
-      begin
-
-        # scope to filter by every column name
-        child.column_names.each do |column|
-          scope "filter_by_#{column}".to_sym, ->(val) { where({column.to_sym => val} )}
-        end
-
-        # scope to filter by date or time column names
-        child.columns.select{ |c| c.type.in? [:date, :datetime] }.map(&:name).each do |column|
-          column_base = column.split(/_at$/).first
-          scope "filter_by_#{column_base}_to".to_sym,     ->(time) { where("#{child.table_name}.#{column} <= ?",time)}
-          scope "filter_by_#{column_base}_from".to_sym,   ->(time) { where("#{child.table_name}.#{column} >= ?",time)}
-          scope "filter_by_#{column_base}_before".to_sym, ->(time) { where("#{child.table_name}.#{column} < ?",time)}
-          scope "filter_by_#{column_base}_after".to_sym,  ->(time) { where("#{child.table_name}.#{column} > ?",time)}
-        end
-      rescue
-        #TODO: why are tests failing here!!!
+      # scope to filter by every column name
+      child.column_names.each do |column|
+        scope "filter_by_#{column}".to_sym, ->(val) { where({ column.to_sym => val }) }
       end
+
+      # scope to filter by date or time column names
+      child.columns.select { |c| c.type.in? %i[date datetime] }.map(&:name).each do |column|
+        column_base = column.split(/_at$/).first
+        scope "filter_by_#{column_base}_to".to_sym,     ->(time) { where("#{child.table_name}.#{column} <= ?", time) }
+        scope "filter_by_#{column_base}_from".to_sym,   ->(time) { where("#{child.table_name}.#{column} >= ?", time) }
+        scope "filter_by_#{column_base}_before".to_sym, ->(time) { where("#{child.table_name}.#{column} < ?", time) }
+        scope "filter_by_#{column_base}_after".to_sym,  ->(time) { where("#{child.table_name}.#{column} > ?", time) }
+      end
+    rescue StandardError
+      # TODO: why are tests failing here!!!
     end
   end
 end

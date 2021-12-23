@@ -1,4 +1,7 @@
+# frozen_string_literal: true
+
 module Rails
+  # Base namespace for the entire project
   module Surrender
   end
 end

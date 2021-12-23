@@ -1,17 +1,18 @@
+# frozen_string_literal: true
+
 module Rails
   module Surrender
     module ControllerAdditions
-
       PER_PAGE_OPTIONS = [10, 50, 100]
       PER_PAGE_DEFAULT = 50
       PAGE_DEFAULT     = 1
 
-       def self.included(base)
+      def self.included(base)
         base.before_action :extract_surrender_parameters
         base.extend ClassMethods
-       end
+      end
 
-      #permits_filters allows a controller to define filters that can be used within that controller
+      # permits_filters allows a controller to define filters that can be used within that controller
       module ClassMethods
         def permits_filters *filter_names
           @permitted_filter_names = filter_names
@@ -22,14 +23,14 @@ module Rails
         end
       end
 
-       def initialize(*args)
-         @will_paginate = true
-         super
-       end
+      def initialize(*args)
+        @will_paginate = true
+        super
+      end
 
       def surrender(source, *args)
         opts = args.extract_options!
-        status = opts.has_key?(:status) ? opts[:status] : 200
+        status = opts.key?(:status) ? opts[:status] : 200
 
         @resource = source
         @resource_class = @resource.respond_to?(:klass) ? @resource.klass : @resource.class
@@ -52,20 +53,24 @@ module Rails
         @resource = paginate @resource
 
         render_control = {
-          reload_resource: (opts.has_key?(:reload_resource) ? opts[:reload_resource] : true),
+          reload_resource: (opts.key?(:reload_resource) ? opts[:reload_resource] : true),
           user_exclude: @exclude, # User requested excludes
           user_include: @include, # User requested includes
-          ctrl_exclude: (opts.has_key?(:exclude) ? opts[:exclude] : []),
-          ctrl_include: (opts.has_key?(:include) ? opts[:include] : [])
+          ctrl_exclude: (opts.key?(:exclude) ? opts[:exclude] : []),
+          ctrl_include: (opts.key?(:include) ? opts[:include] : [])
         }
 
         # Generate data hash and render
-        surrender_response = Render.render(@resource, current_ability: current_ability, render_control: render_control)
+        surrender_response = Render.render(
+          @resource,
+          current_ability: current_ability,
+          render_control: render_control
+        )
 
         # Allows the calling method to decorate the response data before returning the result
         surrender_response.data = yield surrender_response.data if block_given?
 
-        render(json: ::Oj.dump(surrender_response.data, mode: :compat), status: status)
+        render(json: surrender_response.json_data, status: status)
       end
 
       private
@@ -87,7 +92,7 @@ module Rails
           elsif resource.respond_to?(scope_filter_method_id.to_sym) # resolved it by appending _id?
             resource = resource.send(scope_filter_method_id, term)
           elsif !self.class.permitted_filter_names.include?(scope.to_sym) # controller wants this filter?
-            raise Error, key: 'surrender.error.query_string.filter.not_available', params: { a: scope }
+            raise Error, I18n.t('surrender.error.query_string.filter.not_available', params: { a: scope })
           end
         end
         resource
@@ -117,7 +122,7 @@ module Rails
         response.headers['X-Sort'] = @sort
         direction_flag = ['+', '-'].include?(@sort[0, 1]) ? @sort.slice!(0) : '+'
         sort_direction = direction_flag == '-' ? 'DESC' : 'ASC'
-        scope_method = "sort_by_#{@sort}".gsub('.','_').to_sym
+        scope_method = "sort_by_#{@sort}".gsub('.', '_').to_sym
 
         # prepare for nested sorting
         association = @sort.split('.')[0]
@@ -129,47 +134,48 @@ module Rails
         elsif resource.respond_to?(scope_method)
           # a sort scope is available
           resource.send(scope_method, sort_direction)
-        elsif resource.reflections.keys.include?(association) && resource.reflect_on_association(association).klass.attribute_names.include?(attribute)
+        elsif resource.reflections.keys.include?(association) &&
+              resource.reflect_on_association(association).klass.attribute_names.include?(attribute)
           # join a second order sort request
           table_name = resource.reflect_on_association(association).klass.table_name
           resource.joins(association.to_sym).order("#{table_name}.#{attribute} #{sort_direction}")
         else
-          raise Error, key: 'surrender.error.query_string.sort.invalid_column', params: { a: @sort }
+          raise Error, I18n.t('surrender.error.query_string.sort.invalid_column', params: { a: @sort })
         end
       end
 
       def extract_surrender_parameters
         @sort = query_params.delete(:sort) || 'id'
-        @count = query_params.has_key?(:count) and query_params.delete(:count)
-        @ids = query_params.has_key?(:ids) and query_params.delete(:ids)
+        @count = query_params.key?(:count) and query_params.delete(:count)
+        @ids = query_params.key?(:ids) and query_params.delete(:ids)
 
         begin
-          @pagination_requested = query_params.has_key?(:page)
+          @pagination_requested = query_params.key?(:page)
           @page = query_params.delete(:page).try(:to_i) || 1
           @per = query_params.delete(:per) || PER_PAGE_DEFAULT
           @per = PER_PAGE_OPTIONS.include?(@per.to_i) ? @per.to_i : PER_PAGE_DEFAULT
         rescue
-          raise Error, key: 'surrender.error.query_string.pagination.invalid'
+          raise Error, I18n.t('surrender.error.query_string.pagination.invalid')
         end
 
         begin
           include = query_params.delete(:include) || ''
           @include = Psych.safe_load('[' + include.gsub(/(,|:)/, '\1 ') + ']')
         rescue
-          raise Error, key: 'surrender.error.query_string.include.incorrect_format', params: { a: include }
+          raise Error, I18n.t('surrender.error.query_string.include.incorrect_format', params: { a: include })
         end
 
         begin
           exclude = query_params.delete(:exclude) || ''
           @exclude = Psych.safe_load('[' + exclude.gsub(/(,|:)/, '\1 ') + ']')
         rescue
-          raise Error, key: 'surrender.error.query_string.exclude.incorrect_format', params: { a: exclude }
+          raise Error, I18n.t('surrender.error.query_string.exclude.incorrect_format', params: { a: exclude })
         end
 
         begin
           # Any params remaining are assumed to be attempting to perform a filter, so we gather them here
           # Assume any keys except controller and action are for filtering
-          if query_params.length > 0
+          unless query_params.length.zero?
             @will_filter = true
             @filter_map = {}
             query_params.keys.each do |key|

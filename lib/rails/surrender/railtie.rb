@@ -1,8 +1,9 @@
+# frozen_string_literal: true
+
 module Rails
   module Surrender
     class Railtie < ::Rails::Railtie
       config.after_initialize do
-
         ActionController::Base.class_eval do
           include Rails::Surrender::ControllerAdditions
           puts 'here'
