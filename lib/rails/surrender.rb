@@ -14,6 +14,8 @@ require 'rails/surrender/exceptions'
 require 'rails/surrender/model_additions'
 require 'rails/surrender/railtie'
 require 'rails/surrender/render'
+require 'rails/surrender/render_count'
+require 'rails/surrender/render_ids'
 require 'rails/surrender/response'
 require 'rails/surrender/version'
 
