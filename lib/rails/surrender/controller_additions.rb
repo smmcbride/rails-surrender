@@ -1,15 +1,25 @@
 # frozen_string_literal: true
 
+require_relative 'helpers/yaml_query_parser'
+
 module Rails
   module Surrender
     module ControllerAdditions
-      PER_PAGE_OPTIONS = [10, 50, 100]
+      PER_PAGE_OPTIONS = [10, 50, 100].freeze
       PER_PAGE_DEFAULT = 50
       PAGE_DEFAULT     = 1
+
+      COUNT_PARAM = :count
+      EXCLUDE_PARAM = :exclude
+      FILTER_PARAM = :filter
+      IDS_PARAM = :ids
+      INCLUDE_PARAM = :include
+      SORT_PARAM = :sort
 
       def self.included(base)
         base.before_action :extract_surrender_parameters
         base.extend ClassMethods
+
       end
 
       # permits_filters allows a controller to define filters that can be used within that controller
@@ -28,43 +38,19 @@ module Rails
         super
       end
 
-      def surrender(source, *args)
-        opts = args.extract_options!
-        status = opts.key?(:status) ? opts[:status] : 200
+      def surrender(resource, status: 200)
+        resource = filter resource if filter?
+        resource = sort resource if sort?
 
-        @resource = source
-        @resource_class = @resource.respond_to?(:klass) ? @resource.klass : @resource.class
+        # Short circuit if count or ids are requested
+        render_count(resource) and return if render_count?
+        render_ids(resource) and return if render_ids?
 
-        @resource = filter @resource
-        @resource = sort @resource if @sort.present?
+        resource = paginate resource
 
-        # Short circuit if count was requested
-        if @count.present?
-          count = @resource.respond_to?(:count) ? @resource.count : 1
-          render(json: { count: count }, status: status) and return
-        end
-
-        # Short circuit if ids were requested
-        if @ids.present?
-          ids = @resource.respond_to?(:ids) ? @resource.ids : [@resource.id]
-          render(json: ids, status: status) and return
-        end
-
-        @resource = paginate @resource
-
-        render_control = {
-          reload_resource: (opts.key?(:reload_resource) ? opts[:reload_resource] : true),
-          user_exclude: @exclude, # User requested excludes
-          user_include: @include, # User requested includes
-          ctrl_exclude: (opts.key?(:exclude) ? opts[:exclude] : []),
-          ctrl_include: (opts.key?(:include) ? opts[:include] : [])
-        }
-
-        # Generate data hash and render
-        surrender_response = Render.render(
-          @resource,
-          current_ability: current_ability,
-          render_control: render_control
+        surrender_response = Render.render( resource,
+                                            current_ability: current_ability,
+                                            render_control: render_control
         )
 
         # Allows the calling method to decorate the response data before returning the result
@@ -75,15 +61,45 @@ module Rails
 
       private
 
+      def render_control(opts)
+        {
+          reload_resource: (opts.key?(:reload_resource) ? opts[:reload_resource] : true),
+          user_exclude: api_exclude,
+          user_include: api_include,
+          ctrl_exclude: (opts.key?(:exclude) ? opts[:exclude] : []),
+          ctrl_include: (opts.key?(:include) ? opts[:include] : [])
+        }
+      end
+
+      def render_count?
+        query_params.key?(COUNT_PARAM)
+      end
+
+      def render_count(resource)
+        count = resource.respond_to?(:count) ? resource.count : 1
+        render(json: { count: count }, status: status)
+      end
+
+      def render_ids?
+        query_params.key?(IDS_PARAM)
+      end
+
+      def render_ids(resource)
+        ids = resource.respond_to?(:ids) ? resource.ids : [resource.id]
+        render(json: ids, status: status)
+      end
+
       def skip_pagination
         @will_paginate = false
       end
 
       def filter(resource)
-        return resource unless resource.is_a?(ActiveRecord::Relation) && @will_filter
+        return resource unless resource.is_a?(ActiveRecord::Relation)
 
         # prepend filter_by so that only filter_by scope methods are reachable.
         # make user_id and organization.id resolve to the same scope
+        raise 'need to redo filtering to use filter and not @filter_map'
+        filter_map
         @filter_map.each do |scope, term|
           scope_filter_method = "filter_by_#{scope}".gsub('.', '_')
           scope_filter_method_id = scope_filter_method + '_id'
@@ -145,10 +161,6 @@ module Rails
       end
 
       def extract_surrender_parameters
-        @sort = query_params.delete(:sort) || 'id'
-        @count = query_params.key?(:count) and query_params.delete(:count)
-        @ids = query_params.key?(:ids) and query_params.delete(:ids)
-
         begin
           @pagination_requested = query_params.key?(:page)
           @page = query_params.delete(:page).try(:to_i) || 1
@@ -157,36 +169,34 @@ module Rails
         rescue
           raise Error, I18n.t('surrender.error.query_string.pagination.invalid')
         end
+      end
 
-        begin
-          include = query_params.delete(:include) || ''
-          @include = Psych.safe_load('[' + include.gsub(/(,|:)/, '\1 ') + ']')
-        rescue
-          raise Error, I18n.t('surrender.error.query_string.include.incorrect_format', params: { a: include })
-        end
+      def sort?
+        sort_param.present?
+      end
 
-        begin
-          exclude = query_params.delete(:exclude) || ''
-          @exclude = Psych.safe_load('[' + exclude.gsub(/(,|:)/, '\1 ') + ']')
-        rescue
-          raise Error, I18n.t('surrender.error.query_string.exclude.incorrect_format', params: { a: exclude })
-        end
+      def sort_param
+        YamlQueryParser.parse query_params[SORT_PARAM]
+      end
 
-        begin
-          # Any params remaining are assumed to be attempting to perform a filter, so we gather them here
-          # Assume any keys except controller and action are for filtering
-          unless query_params.length.zero?
-            @will_filter = true
-            @filter_map = {}
-            query_params.keys.each do |key|
-              @filter_map[key] = query_params[key] # get the term
-            end
-          end
-        end
+      def filter?
+        filter_map.present?
+      end
+
+      def filter_map
+        YamlQueryParser.parse query_params[FILTER_PARAM]
+      end
+
+      def api_include
+        YamlQueryParser.parse query_params[INCLUDE_PARAM]
+      end
+
+      def api_exclude
+        YamlQueryParser.parse query_params[EXCLUDE_PARAM]
       end
 
       def query_params
-        request.query_parameters
+        @query_params ||= request.query_parameters.symbolize_keys
       end
     end
   end
