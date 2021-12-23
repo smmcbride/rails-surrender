@@ -5,7 +5,7 @@ module Rails
     class RenderCount
       def self.render(resource)
         count = resource.respond_to?(:count) ? resource.count : 1
-        Response.new(data: { count: count})
+        Response.new(data: { count: count })
       end
     end
   end

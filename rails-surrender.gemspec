@@ -16,5 +16,5 @@ Gem::Specification.new do |s|
   s.license = 'GPL-3.0'
   s.add_dependency 'kaminari', ['= 1.2.1']
   s.add_dependency 'oj', ['= 3.13.10']
-  s.required_ruby_version = '3.0.1'
+  s.required_ruby_version = '~> 3.0'
 end

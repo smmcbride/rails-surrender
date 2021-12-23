@@ -1,0 +1,9 @@
+AllCops:
+  NewCops: enable
+  Exclude:
+    - Gemfile
+    - Gemfile.lock
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'

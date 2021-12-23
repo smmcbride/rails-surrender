@@ -12,8 +12,8 @@ module Rails
       IDS_PARAM = :ids
       INCLUDE_PARAM = :include
       SORT_PARAM = :sort
-      PAGE_PARAM :page
-      PER_PARAM :per
+      PAGE_PARAM = :page
+      PER_PARAM = :per
 
       PER_PAGE_DEFAULT = 50
       PAGE_DEFAULT = 1
@@ -39,7 +39,7 @@ module Rails
 
       def sort
         @sort ||= begin
-          sort = query_params[SORT_PARAM]
+          sort = String.new(query_params[SORT_PARAM] || '')
 
           direction_flag = ['+', '-'].include?(sort[0, 1]) ? sort.slice!(0) : '+'
           direction = direction_flag == '-' ? 'DESC' : 'ASC'
@@ -53,11 +53,11 @@ module Rails
       end
 
       def filter?
-        filter_map.present?
+        filter.present?
       end
 
-      def filter_map
-        @filter_map ||= parse_yml(query_params[FILTER_PARAM], :filter)
+      def filter
+        @filter ||= parse_yml(query_params[FILTER_PARAM], :filter)
       end
 
       def ids?
@@ -84,14 +84,14 @@ module Rails
       def sort_attributes(sort)
         return sort.split('.') if sort.include? '.'
 
-        [nil, sort]
+        ['', sort]
       end
 
       def parse_yml(query_string, action)
         query_string ||= '' # empty string in case nil is passed
         Psych.safe_load("[#{query_string.gsub(/(,|:)/, '\1 ')}]")
       rescue StandardError
-        raise Error, I18n.t('surrender.error.query_string.incorrect_format', params: { a: action })
+        raise Error, I18n.t('surrender.error.query_string.incorrect_format', param: action)
       end
     end
   end

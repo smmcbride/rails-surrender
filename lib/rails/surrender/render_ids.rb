@@ -5,7 +5,7 @@ module Rails
     class RenderIds
       def self.render(resource)
         ids = resource.respond_to?(:ids) ? resource.ids : [resource.id]
-        Response.new(data: { ids: ids})
+        Response.new(data: { ids: ids })
       end
     end
   end
