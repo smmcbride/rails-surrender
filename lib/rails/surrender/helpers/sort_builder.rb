@@ -20,7 +20,7 @@ module Rails
 
         return association_attribute_order if resource_has_association_with_attribute?
 
-        raise Error, I18n.t('surrender.error.query_string.sort.invalid_column', params: { a: sort.request })
+        raise Error, I18n.t('surrender.error.query_string.sort.invalid_column', param: sort.request)
       end
 
       private

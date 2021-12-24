@@ -4,4 +4,7 @@ en:
     error:
       query_string:
         incorrect_format: "The %{param} parameter was improperly formatted."
+        sort:
+          invalid_column: "%{param} is not a valid sort parameter."
+
 
