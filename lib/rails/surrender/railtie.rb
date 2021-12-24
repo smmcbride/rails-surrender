@@ -14,6 +14,7 @@ module Rails
 
         ActiveRecord::Base.class_eval do
           include Rails::Surrender::ModelAdditions
+          include Rails::Surrender::ModelFilterScopes
         end
       end
     end

@@ -37,14 +37,14 @@ module Rails
         end
 
         surrender_response = if parsed_query_params.count?
-                               RenderCount.render(resource)
+                               Render::Count.new(resource).parse
                              elsif parsed_query_params.ids?
-                               RenderIds.render(resource)
+                               Render::Ids.new(resource).parse
                              else
                                control = Control.new(reload: reload, include: include, exclude: exclude)
-                               Render.render(resource,
-                                             current_ability: current_ability,
-                                             render_control: render_control(control))
+                               Render::Resource.render(resource,
+                                                       current_ability: current_ability,
+                                                       render_control: render_control(control))
                              end
 
         # Allows the calling method to decorate the response data before returning the result
@@ -75,7 +75,7 @@ module Rails
       end
 
       def filter(resource)
-        FilterBuilder.new( resource: resource, filter: parsed_query_params.filter ).build!
+        FilterBuilder.new(resource: resource, filter: parsed_query_params.filter).build!
       end
 
       def paginate?
