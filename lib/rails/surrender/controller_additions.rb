@@ -9,19 +9,10 @@ module Rails
   module Surrender
     # Additions to the Rails ActionController to allow surrender's rendering.
     module ControllerAdditions
-      def self.included(base)
-        base.extend ClassMethods
-      end
-
-      module ClassMethods
-      end
-
       def initialize(*args)
         @will_paginate = true
         super
       end
-
-      Control = Struct.new(:reload, :include, :exclude, keyword_init: true)
 
       def surrender(resource, status: 200, reload: true, include: [], exclude: [])
         resource = filter resource if parsed_query_params.filter?
@@ -41,10 +32,18 @@ module Rails
                              elsif parsed_query_params.ids?
                                Render::Ids.new(resource).parse
                              else
-                               control = Control.new(reload: reload, include: include, exclude: exclude)
-                               Render::Resource.render(resource,
+
+                               control = Render::Controller.new(
+                                 reload_resource: reload,
+                                 user_exclude: parsed_query_params.exclude,
+                                 user_include: parsed_query_params.include,
+                                 ctrl_exclude: exclude,
+                                 ctrl_include: include
+                               )
+
+                               Render::Resource.render(resource: resource,
                                                        current_ability: current_ability,
-                                                       render_control: render_control(control))
+                                                       render_control: control)
                              end
 
         # Allows the calling method to decorate the response data before returning the result
@@ -54,21 +53,6 @@ module Rails
       end
 
       private
-
-      def render_control(control_options)
-        {
-          reload_resource: control_options.reload,
-          user_exclude: parsed_query_params.exclude,
-          user_include: parsed_query_params.include,
-          ctrl_exclude: control_options.exclude,
-          ctrl_include: control_options.include
-        }
-      end
-
-      def render_count(resource)
-        count = resource.respond_to?(:count) ? resource.count : 1
-        render(json: { count: count }, status: status)
-      end
 
       def skip_pagination
         @will_paginate = false

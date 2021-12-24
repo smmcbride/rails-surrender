@@ -4,31 +4,28 @@ module Rails
   module Surrender
     module Render
       class Resource
-        def self.render(source, *args)
-          opts = args.extract_options!
-          @ability = opts[:current_ability]
-
-          render_control = opts[:render_control] || {}
+        def self.render(resource:, current_ability:, render_control:)
+          @ability = current_ability
 
           data =
-            if source.nil?
+            if resource.nil?
               {}
-            elsif source.is_a?(Hash) || source.is_a?(Array)
-              source
-            elsif source.is_a? ActiveRecord::Relation
-              includer = includer(source.klass, render_control)
-              render_collection(source.includes(includer), render_control)
+            elsif resource.is_a?(Hash) || resource.is_a?(Array)
+              resource
+            elsif resource.is_a? ActiveRecord::Relation
+              includer = includer(resource_class: resource.klass, control: render_control)
+              render_collection(resource: resource.includes(includer), control: render_control)
             else
-              includer = includer(source.class, render_control)
+              includer = includer(resource_class: resource.class, control: render_control)
 
               # Reloading the instance here allows us to take advantage of the eager loading
               # capabilities of ActiveRecord with our 'includer' hash to prevent N+1 queries.
               # This can save a TON of response time when the data sets begin to get large.
               unless render_control[:reload_resource] == false
-                source = source.class.includes(includer).find_by_id(source.id)
+                resource = resource.class.includes(includer).find_by_id(resource.id)
               end
 
-              render_instance(source, render_control)
+              render_instance(resource:resource, control: render_control)
             end
 
           Response.new(data: data)
@@ -37,52 +34,33 @@ module Rails
         # 'includer' is designed to recursively crawl through the model rendering structure and build a hash
         # that ActiveRecord can use to eager load ALL of the data we're going to render, to prevent N+1 queries
 
-        def self.includer(source_class, *args)
-          opts = args.extract_options!
-          history      = (opts.key?(:history) ? opts[:history] : []).dup.push source_class
-          user_include = opts.key?(:user_include) ? opts[:user_include] : []
-          user_exclude = opts.key?(:user_exclude) ? opts[:user_exclude] : []
-          ctrl_include = opts.key?(:ctrl_include) ? opts[:ctrl_include] : []
-          ctrl_exclude = opts.key?(:ctrl_exclude) ? opts[:ctrl_exclude] : []
+        def self.includer(resource_class:, control:)
+          control.history = control.history.dup.push resource_class
 
-          ctrl_exclude.reject!(&:nil?)
-          user_exclude.reject!(&:nil?)
-          ctrl_exclude_here = ctrl_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-          user_exclude_here = user_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-          ctrl_exclude_next = ctrl_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .reduce({}, :merge)
-                                          .symbolize_keys
-          user_exclude_next = user_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .reduce({}, :merge)
-                                          .symbolize_keys
-          user_include_here = user_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .map(&:to_sym)
-                                          .uniq
-                                          .select { |z| source_class.reflections.key? z.to_s }
-                                          .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } }
-          ctrl_include_here = ctrl_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .map(&:to_sym)
-                                          .uniq
-                                          .select { |z| source_class.reflections.key? z.to_s }
-                                          .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } }
-          user_include_next = user_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .reduce({}, :merge)
-                                          .symbolize_keys
-          ctrl_include_next = ctrl_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .reduce({}, :merge)
-                                          .symbolize_keys
+          ctrl_exclude_here = control.local_ctrl_excludes
+          user_exclude_here = control.local_user_excludes
+          ctrl_exclude_next = control.nested_ctrl_excludes
+          user_exclude_next = control.nested_user_excludes
+          user_include_here = control.local_user_includes
+                                .select { |z| resource_class.reflections.key? z.to_s }
+                                .map { |e| { name: e, class: resource_class.reflections[e.to_s].klass } }
+          ctrl_include_here = control.local_ctrl_includes
+                                .select { |z| resource_class.reflections.key? z.to_s }
+                                .map { |e| { name: e, class: resource_class.reflections[e.to_s].klass } }
+          user_include_next = control.nested_user_includes
+          ctrl_include_next = control.nested_ctrl_includes
 
           includes = []
           list = user_include_here +
             ctrl_include_here +
-            source_class.surrender_attributes
+            resource_class.surrender_attributes
                         .select { |x| x.match /_ids$/ }
                         .map { |y| y.to_s.sub('_ids', '').pluralize }
-                        .select { |z| z.in? source_class.reflections.keys }
-                        .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } } +
-            source_class.surrender_expands
-                        .map { |e| { name: e, class: source_class.reflections[e.to_s].klass } } +
-            source_class.subclasses
+                        .select { |z| z.in? resource_class.reflections.keys }
+                        .map { |e| { name: e, class: resource_class.reflections[e.to_s].klass } } +
+            resource_class.surrender_expands
+                        .map { |e| { name: e, class: resource_class.reflections[e.to_s].klass } } +
+            resource_class.subclasses
                         .map do |sc|
               sc.surrender_attributes
                 .select { |x| x.match /_ids$/ }
@@ -90,29 +68,34 @@ module Rails
                 .select { |z| z.in? sc.reflections.keys }
                 .map { |e| { name: e, class: sc.reflections[e.to_s].klass } }
             end +
-            source_class.subclasses
+            resource_class.subclasses
                         .map do |sc|
               sc.surrender_expands.map { |e| { name: e, class: sc.reflections[e.to_s].klass } }
             end
           list.flatten!
           list.uniq!
           list.reject! do |x|
-            x[:class].in?(history) ||
+            x[:class].in?(control.history) ||
               x[:name].in?(user_exclude_here) ||
               (x[:name].in?(ctrl_exclude_here) && !x[:name].in?(user_include_here.map { |k| k[:name] }))
           end
 
           list.each do |item|
             exp = item[:name]
-            resource_class = item[:class]
+            item_class = item[:class]
 
-            nested = includer(
-              resource_class,
+            item_control = Controller.new(
+              resource_class: item_class,
               user_include: user_include_next[exp] || [],
               ctrl_include: ctrl_include_next[exp] || [],
               user_exclude: user_exclude_next[exp] || [],
               ctrl_exclude: ctrl_exclude_next[exp] || [],
-              history: history.dup.push(resource_class)
+              history: control.history.dup.push(item_class)
+            )
+
+            nested = includer(
+              resource_class: item_class,
+              control: item_control
             )
 
             if nested.size.zero?
@@ -124,25 +107,24 @@ module Rails
           includes.sort_by { |x| x.is_a?(Symbol) ? 0 : 1 }
         end
 
-        def self.render_collection(source, *args)
-          return nil if source.nil?
+        def self.render_collection(resource:, control:)
+          return nil if resource.nil?
 
-          source.map { |x| render_instance(x, *args) }
+          resource.map { |x| render_instance(resource: x, control: control ) }
         end
 
-        def self.render_instance(source, *args)
-          return nil if source.nil?
+        def self.render_instance(resource:, control:)
+          return nil if resource.nil?
 
-          resource_class = source.class
+          resource_class = resource.class
 
-          opts = args.extract_options!
-          history       = opts.key?(:history)      ? opts[:history]      : []
-          user_include  = opts.key?(:user_include) ? opts[:user_include] : []
-          user_exclude  = opts.key?(:user_exclude) ? opts[:user_exclude] : []
-          ctrl_include  = opts.key?(:ctrl_include) ? opts[:ctrl_include] : []
-          ctrl_exclude  = opts.key?(:ctrl_exclude) ? opts[:ctrl_exclude] : []
+          history       = control.history
+          user_include  = control.user_include
+          user_exclude  = control.user_exclude
+          ctrl_include  = control.ctrl_include
+          ctrl_exclude  = control.ctrl_exclude
 
-          class_exclude = opts.key?(:class_exclude) ? opts[:class_exclude] : []
+          class_exclude = control.class_exclude
           class_exclude.push(resource_class.surrender_skip_expands.dup).flatten!.uniq!
 
           # get to the root subclass for sti models and store that as history
@@ -153,28 +135,18 @@ module Rails
 
           class_history = history.dup.push history_class
 
-          user_include_here = user_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq
-
-          # ctrl_include(here/next) are generally covered by the ctrl_include loop below,
-          # so I don't think they're needed here...
-          _ctrl_include_here = ctrl_include.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq
-          _ctrl_include_next = ctrl_include.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                           .reduce({}, :merge)
-                                           .symbolize_keys
+          user_include_here = control.local_user_includes
 
           # handle expands that we want to skip
-          ctrl_exclude_here = ctrl_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-          ctrl_exclude_next = ctrl_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .reduce({}, :merge)
-                                          .symbolize_keys
-          user_exclude_here = user_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-          user_exclude_next = user_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                          .reduce({}, :merge)
-                                          .symbolize_keys
-          class_exclude_here = class_exclude.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym)
-          class_exclude_next = class_exclude.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }
-                                            .reduce({}, :merge)
-                                            .symbolize_keys
+          ctrl_exclude_here = control.local_ctrl_excludes
+          ctrl_exclude_next = control.nested_ctrl_excludes
+
+          user_exclude_here = control.local_user_excludes
+          user_exclude_next = control.nested_user_excludes
+
+          class_exclude_here = control.local_class_excludes
+          class_exclude_next = control.nested_class_excludes
+
           exclude_here = ctrl_exclude_here.dup.push(user_exclude_here).push(class_exclude_here).flatten.uniq
 
           included_attrs   = []
@@ -229,7 +201,7 @@ module Rails
           end
 
           included_attrs.each do |a|
-            result[a.to_sym] = source.send(a)
+            result[a.to_sym] = resource.send(a)
           end
 
           expandings = included_expands
@@ -251,7 +223,7 @@ module Rails
               begin
                 nested_resource_class = resource_class.reflections[key.to_s].klass
               rescue NoMethodError
-                nested_resource_class = source.send(key).class
+                nested_resource_class = resource.send(key).class
               end
 
               # skip classes in history stack to prevent circular rendering.
@@ -261,29 +233,29 @@ module Rails
               nested_ctrl_exclude  = ctrl_exclude_next[key]  || []
               nested_class_exclude = class_exclude_next[key] || []
 
-              if source.class.reflections[key.to_s].try(:collection?)
-                collection = source.send(key.to_sym).select { |i| @ability.can? :read, i }
-                result[key.to_sym] = render_collection(
-                  collection,
+              if resource.class.reflections[key.to_s].try(:collection?)
+                collection = resource.send(key.to_sym).select { |i| @ability.can? :read, i }
+                collection_control = Controller.new(
                   ctrl_include: value, # this is the merge of user_include and ctrl_include from input
                   history: class_history,
                   user_exclude: nested_user_exclude,
                   ctrl_exclude: nested_ctrl_exclude,
                   class_exclude: nested_class_exclude
                 )
+                result[key.to_sym] = render_collection( resource: collection, control: collection_control )
               else
-                instance = source.send(key)
+                instance = resource.send(key)
                 next if class_history.include? instance.class
 
                 if @ability.can?(:read, instance)
-                  result[key.to_sym] = render_instance(
-                    instance,
+                  instance_control = Controller.new(
                     ctrl_include: value, # this is the merge of user_include and ctrl_include from input
                     history: class_history,
                     user_exclude: nested_user_exclude,
                     ctrl_exclude: nested_ctrl_exclude,
                     class_exclude: nested_class_exclude
                   )
+                  result[key.to_sym] = render_instance( resource: instance, control: instance_control )
                 elsif instance.nil?
                   result[key.to_sym] = nil # represent an associated element as null if it's missing
                 end
