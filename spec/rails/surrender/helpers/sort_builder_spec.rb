@@ -36,7 +36,7 @@ describe Rails::Surrender::SortBuilder do
   end
 
   describe '#build!' do
-    context 'when resource is not an ActiveRecord::Reation' do
+    context 'when resource is not an ActiveRecord::Relation' do
       let(:is_a_relation) { false }
 
       it 'returns the resource' do

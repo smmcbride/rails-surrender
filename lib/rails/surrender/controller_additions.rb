@@ -13,15 +13,7 @@ module Rails
         base.extend ClassMethods
       end
 
-      # permits_filters allows a controller to define filters that can be used within that controller
       module ClassMethods
-        def permits_filters(*filter_names)
-          @permitted_filter_names = filter_names
-        end
-
-        def permitted_filter_names
-          @permitted_filter_names ||= []
-        end
       end
 
       def initialize(*args)
@@ -41,7 +33,7 @@ module Rails
 
         if paginate?
           resource = paginate resource
-          response.headers['X-Pagination'] = pagination_headers(resuorce)
+          response.headers['X-Pagination'] = pagination_headers(resource)
         end
 
         surrender_response = if parsed_query_params.count?
@@ -83,7 +75,7 @@ module Rails
       end
 
       def filter(resource)
-        FilterBuilder.new(resource: resource, filter: parsed_query_params.filter_map)
+        FilterBuilder.new( resource: resource, filter: parsed_query_params.filter ).build!
       end
 
       def paginate?
@@ -91,7 +83,7 @@ module Rails
       end
 
       def paginate(resource)
-        PaginationBuilder.new(resource: resource, pagination: parsed_query_params.pagination)
+        PaginationBuilder.new(resource: resource, pagination: parsed_query_params.pagination).build!
       end
 
       def pagination_headers(resource)

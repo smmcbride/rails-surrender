@@ -14,36 +14,31 @@ module Rails
       def build!
         return resource unless resource.is_a?(ActiveRecord::Relation)
 
-        # prepend filter_by so that only filter_by scope methods are reachable.
-        # make user_id and organization.id resolve to the same scope
-        filter.each do |scope, term|
+        filter.each do |term|
+          scope, value = term.first
+
           # filter exists on model?
-          return resource.send(filter_method(scope), term) if resource.respond_to?(filter_method(scope))
+          @resource = @resource.send(filter_method(scope), value) if resource.respond_to?(filter_method(scope))
 
-          # resolved it by appending _id?
-          return resource.send(filter_method_id(scope), term) if resource.respond_to?(filter_method_id(scope))
-
-          unless filter_permitted?(scope)
-            raise Error, I18n.t('surrender.error.query_string.filter.not_available', params: { a: scope })
-          end
+            # resolved it by appending _id?
+          @resource = @resource.send(filter_method_id(scope), value) if resource.respond_to?(filter_method_id(scope))
         end
 
+        # TODO: Why amd I having to use the instance variable here?
         resource
       end
 
       private
 
-      def filter_permitted?(scope)
-        self.class.permitted_filter_names.include?(scope.to_sym)
+      # prepend filter_by so that only filter_by scope methods are reachable.
+      def filter_method(scope)
+        "filter_by_#{scope}".gsub('.', '_').to_sym
       end
 
       def filter_method_id(scope)
         "#{filter_method(scope)}_id".to_sym
       end
 
-      def filter_method(scope)
-        "filter_by_#{scope}".gsub('.', '_').to_sym
-      end
     end
   end
 end
