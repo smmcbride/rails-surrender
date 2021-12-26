@@ -27,10 +27,18 @@ module Rails
             # scope to filter by date or time column names
             child.columns.select { |c| c.type.in? %i[date datetime] }.map(&:name).each do |column|
               column_base = column.split(/_at$/).first
-              scope "filter_by_#{column_base}_to".to_sym,     ->(time) { where("#{child.table_name}.#{column} <= ?", time) }
-              scope "filter_by_#{column_base}_from".to_sym,   ->(time) { where("#{child.table_name}.#{column} >= ?", time) }
-              scope "filter_by_#{column_base}_before".to_sym, ->(time) { where("#{child.table_name}.#{column} < ?", time) }
-              scope "filter_by_#{column_base}_after".to_sym,  ->(time) { where("#{child.table_name}.#{column} > ?", time) }
+              scope "filter_by_#{column_base}_to".to_sym, lambda { |time|
+                                                            where("#{child.table_name}.#{column} <= ?", time)
+                                                          }
+              scope "filter_by_#{column_base}_from".to_sym, lambda { |time|
+                                                              where("#{child.table_name}.#{column} >= ?", time)
+                                                            }
+              scope "filter_by_#{column_base}_before".to_sym, lambda { |time|
+                                                                where("#{child.table_name}.#{column} < ?", time)
+                                                              }
+              scope "filter_by_#{column_base}_after".to_sym, lambda { |time|
+                                                               where("#{child.table_name}.#{column} > ?", time)
+                                                             }
             end
           rescue StandardError
             # TODO: why are tests failing here!!!

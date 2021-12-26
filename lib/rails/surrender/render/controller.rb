@@ -14,7 +14,7 @@ module Rails
                       :class_exclude,
                       :history
 
-        alias_method :reload_resource?, :reload_resource
+        alias reload_resource? reload_resource
 
         def initialize(
           resource_class: nil,
@@ -77,10 +77,10 @@ module Rails
         end
 
         def local_excludes
-         local_ctrl_excludes.dup
-           .push(local_user_excludes)
-           .push(local_class_excludes)
-           .flatten.uniq
+          local_ctrl_excludes.dup
+                             .push(local_user_excludes)
+                             .push(local_class_excludes)
+                             .flatten.uniq
         end
 
         def exclude_locally?(key)

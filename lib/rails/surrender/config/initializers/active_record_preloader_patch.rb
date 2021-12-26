@@ -1,4 +1,4 @@
-# # frozen_string_literal: true
+# frozen_string_literal: true
 #
 # ActiveRecord::Associations::Preloader.class_eval do
 #   # patching to ignore nil response from association method (also patched)

@@ -6,7 +6,6 @@ require 'rails/surrender/version'
 Gem::Specification.new do |s|
   s.name = 'rails-surrender'
   s.version = Rails::Surrender::VERSION
-  s.date = '2021-12-22'
   s.summary = 'JSON rendering for Rails API'
   s.authors = ['Shawn McBride']
   s.email = 'smmcbride@gmail.com'
@@ -17,4 +16,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'kaminari', ['= 1.2.1']
   s.add_dependency 'oj', ['= 3.13.10']
   s.required_ruby_version = '~> 3.0'
+  s.metadata = {
+    'rubygems_mfa_required' => 'true'
+  }
 end

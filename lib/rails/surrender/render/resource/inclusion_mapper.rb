@@ -28,24 +28,10 @@ module Rails
             includes = []
             list = user_include_here +
                    ctrl_include_here +
-                   resource_class.surrender_attributes
-                                 .select { |x| x.match /_ids$/ }
-                                 .map { |y| y.to_s.sub('_ids', '').pluralize }
-                                 .select { |z| z.in? resource_class.reflections.keys }
-                                 .map { |e| element_from(e) } +
-                   resource_class.surrender_expands.map { |e| element_from(e) } +
-                   resource_class.subclasses
-                                 .map do |sc|
-                     sc.surrender_attributes
-                       .select { |x| x.match /_ids$/ }
-                       .map { |y| y.to_s.sub('_ids', '').pluralize }
-                       .select { |z| z.in? sc.reflections.keys }
-                       .map { |e| element_from(e, klass: sc) }
-                   end +
-                   resource_class.subclasses
-                                 .map do |sc|
-                     sc.surrender_expands.map { |e| element_from(e, klass: sc) }
-                   end
+                   resource_class_attributes +
+                   resource_class_expands +
+                   resource_class_subclass_attributes +
+                   resource_class_subclass_expands
             list.flatten!
             list.uniq!
             list.reject! do |x|
@@ -64,21 +50,44 @@ module Rails
                 history: control.history.dup.push(element.klass)
               )
 
-              nested = InclusionMapper.new(
-                resource_class: element.klass,
-                control: item_control
-              ).includes
+              nested = InclusionMapper.new(resource_class: element.klass, control: item_control).includes
 
-              includes << if nested.size.zero?
-                            element.name
-                          else
-                            { element.name => nested }
-                          end
+              includes << nested.size.zero? ? element.name : { element.name => nested }
             end
+
             includes.sort_by { |x| x.is_a?(Symbol) ? 0 : 1 }
           end
 
           private
+
+          def resource_class_attributes
+            resource_class.surrender_attributes
+                          .select { |x| x.match /_ids$/ }
+                          .map { |y| y.to_s.sub('_ids', '').pluralize }
+                          .select { |z| z.in? resource_class.reflections.keys }
+                          .map { |e| element_from(e) }
+          end
+
+          def resource_class_expands
+            resource_class.surrender_expands.map { |e| element_from(e) }
+          end
+
+          def resource_class_subclass_attributes
+            resource_class.subclasses.map do |sc|
+              sc.surrender_attributes
+                .select { |x| x.match /_ids$/ }
+                .map { |y| y.to_s.sub('_ids', '').pluralize }
+                .select { |z| z.in? sc.reflections.keys }
+                .map { |e| element_from(e, klass: sc) }
+            end
+          end
+
+          def resource_class_subclass_expands
+            resource_class.subclasses
+                          .map do |sc|
+              sc.surrender_expands.map { |e| element_from(e, klass: sc) }
+            end
+          end
 
           def element_from(item, klass: resource_class)
             Element.new name: item, klass: klass.reflections[item.to_s].klass

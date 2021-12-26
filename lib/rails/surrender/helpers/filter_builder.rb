@@ -20,7 +20,7 @@ module Rails
           # filter exists on model?
           @resource = @resource.send(filter_method(scope), value) if resource.respond_to?(filter_method(scope))
 
-            # resolved it by appending _id?
+          # resolved it by appending _id?
           @resource = @resource.send(filter_method_id(scope), value) if resource.respond_to?(filter_method_id(scope))
         end
 
@@ -38,7 +38,6 @@ module Rails
       def filter_method_id(scope)
         "#{filter_method(scope)}_id".to_sym
       end
-
     end
   end
 end

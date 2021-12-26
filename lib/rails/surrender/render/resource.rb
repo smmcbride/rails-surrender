@@ -24,7 +24,7 @@ module Rails
                 resource = resource.class.includes(includes).find_by_id(resource.id)
               end
 
-              render_instance(resource:resource, control: render_control)
+              render_instance(resource: resource, control: render_control)
             end
 
           Response.new(data: data)
@@ -33,7 +33,7 @@ module Rails
         def self.render_collection(resource:, control:)
           return nil if resource.nil?
 
-          resource.map { |x| render_instance(resource: x, control: control ) }
+          resource.map { |x| render_instance(resource: x, control: control) }
         end
 
         def self.render_instance(resource:, control:)
@@ -44,9 +44,7 @@ module Rails
 
           # get to the root subclass for sti models and store that as history
           history_class = resource_class
-          until history_class.superclass == ActiveRecord::Base
-            history_class = history_class.superclass
-          end
+          history_class = history_class.superclass until history_class.superclass == ActiveRecord::Base
 
           class_history = control.history.dup.push history_class
 
@@ -143,7 +141,7 @@ module Rails
                   ctrl_exclude: nested_ctrl_exclude,
                   class_exclude: nested_class_exclude
                 )
-                result[key.to_sym] = render_collection( resource: collection, control: collection_control )
+                result[key.to_sym] = render_collection(resource: collection, control: collection_control)
               else
                 instance = resource.send(key)
                 next if class_history.include? instance.class
@@ -156,7 +154,7 @@ module Rails
                     ctrl_exclude: nested_ctrl_exclude,
                     class_exclude: nested_class_exclude
                   )
-                  result[key.to_sym] = render_instance( resource: instance, control: instance_control )
+                  result[key.to_sym] = render_instance(resource: instance, control: instance_control)
                 elsif instance.nil?
                   result[key.to_sym] = nil # represent an associated element as null if it's missing
                 end

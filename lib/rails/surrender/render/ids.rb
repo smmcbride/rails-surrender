@@ -11,9 +11,9 @@ module Rails
         end
 
         def parse
-        ids = resource.respond_to?(:ids) ? resource.ids : [resource.id]
-        Response.new(data: { ids: ids })
-      end
+          ids = resource.respond_to?(:ids) ? resource.ids : [resource.id]
+          Response.new(data: { ids: ids })
+        end
       end
     end
   end
