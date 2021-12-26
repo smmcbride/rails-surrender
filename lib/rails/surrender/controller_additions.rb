@@ -22,7 +22,7 @@ module Rails
           response.headers['X-Sort'] = parsed_query_params.sort.request
         end
 
-        if paginate?
+        if paginate?(resource)
           resource = paginate resource
           response.headers['X-Pagination'] = pagination_headers(resource)
         end
@@ -62,12 +62,16 @@ module Rails
         FilterBuilder.new(resource: resource, filter: parsed_query_params.filter).build!
       end
 
-      def paginate?
-        @will_paginate || parsed_query_params.paginate?
+      def paginate?(resource)
+        pagination(resource).paginatable? && @will_paginate
       end
 
       def paginate(resource)
-        PaginationBuilder.new(resource: resource, pagination: parsed_query_params.pagination).build!
+        pagination(resource).build!
+      end
+
+      def pagination(resource)
+        PaginationBuilder.new(resource: resource, pagination: parsed_query_params.pagination)
       end
 
       def pagination_headers(resource)

@@ -19,7 +19,7 @@ module Rails
               # Reloading the instance here allows us to take advantage of the eager loading
               # capabilities of ActiveRecord with our 'includes' hash to prevent N+1 queries.
               # This can save a TON of response time when the data sets begin to get large.
-              unless render_control[:reload_resource] == false
+              if render_control.reload_resource?
                 includes = InclusionMapper.new(resource_class: resource.class, control: render_control).includes
                 resource = resource.class.includes(includes).find_by_id(resource.id)
               end
@@ -40,15 +40,7 @@ module Rails
           return nil if resource.nil?
 
           resource_class = resource.class
-
-          history       = control.history
-          user_include  = control.user_include
-          user_exclude  = control.user_exclude
-          ctrl_include  = control.ctrl_include
-          ctrl_exclude  = control.ctrl_exclude
-
-          class_exclude = control.class_exclude
-          class_exclude.push(resource_class.surrender_skip_expands.dup).flatten!.uniq!
+          control.class_exclude.push(resource_class.surrender_skip_expands.dup).flatten!.uniq!
 
           # get to the root subclass for sti models and store that as history
           history_class = resource_class
@@ -56,26 +48,12 @@ module Rails
             history_class = history_class.superclass
           end
 
-          class_history = history.dup.push history_class
-
-          user_include_here = control.local_user_includes
-
-          # handle expands that we want to skip
-          ctrl_exclude_here = control.local_ctrl_excludes
-          ctrl_exclude_next = control.nested_ctrl_excludes
-
-          user_exclude_here = control.local_user_excludes
-          user_exclude_next = control.nested_user_excludes
-
-          class_exclude_here = control.local_class_excludes
-          class_exclude_next = control.nested_class_excludes
-
-          exclude_here = ctrl_exclude_here.dup.push(user_exclude_here).push(class_exclude_here).flatten.uniq
+          class_history = control.history.dup.push history_class
 
           included_attrs   = []
           included_expands = []
 
-          user_include.each do |i|
+          control.user_include.each do |i|
             case i
             when String, Symbol # individual attribute, or association
               if resource_class.reflections.keys.include? i.to_s
@@ -99,7 +77,7 @@ module Rails
           end
 
           # ctrl_includes come from the controller and bypass the 'can_call' checks.
-          ctrl_include.each do |i|
+          control.ctrl_include.each do |i|
             case i
             when String, Symbol # individual attribute, or association
               if resource_class.reflections.keys.include? i.to_s
@@ -120,7 +98,7 @@ module Rails
 
           # MINUS excluded attributes
           included_attrs.reject! do |attr|
-            attr.in?(user_exclude_here) || (attr.in?(ctrl_exclude_here) && !attr.in?(user_include_here))
+            attr.in?(control.local_user_excludes) || (attr.in?(control.local_ctrl_excludes) && !attr.in?(control.local_user_includes))
           end
 
           included_attrs.each do |a|
@@ -141,7 +119,7 @@ module Rails
             e = { e.to_sym => [] } if e.is_a?(Symbol)
 
             e.each do |key, value|
-              next if exclude_here.include?(key) && !user_include_here.include?(key) # Skip excluded expands
+              next if control.exclude_locally?(key)
 
               begin
                 nested_resource_class = resource_class.reflections[key.to_s].klass
@@ -152,9 +130,9 @@ module Rails
               # skip classes in history stack to prevent circular rendering.
               next if class_history.include? nested_resource_class
 
-              nested_user_exclude  = user_exclude_next[key]  || []
-              nested_ctrl_exclude  = ctrl_exclude_next[key]  || []
-              nested_class_exclude = class_exclude_next[key] || []
+              nested_user_exclude  = control.nested_user_excludes[key]  || []
+              nested_ctrl_exclude  = control.nested_ctrl_excludes[key]  || []
+              nested_class_exclude = control.nested_class_excludes[key] || []
 
               if resource.class.reflections[key.to_s].try(:collection?)
                 collection = resource.send(key.to_sym).select { |i| @ability.can? :read, i }

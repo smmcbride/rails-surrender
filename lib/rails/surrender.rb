@@ -18,6 +18,7 @@ require 'rails/surrender/render/ids'
 require 'rails/surrender/render/controller'
 require 'rails/surrender/render/count'
 require 'rails/surrender/render/resource'
+require 'rails/surrender/render/resource/inclusion_mapper'
 require 'rails/surrender/response'
 require 'rails/surrender/version'
 

@@ -12,9 +12,13 @@ module Rails
       end
 
       def build!
-        return resource unless resource.respond_to?(:page)
+        return resource unless paginatable?
 
         resource.page(pagination.page).per(pagination.per)
+      end
+
+      def paginatable?
+        resource.respond_to?(:page)
       end
     end
   end

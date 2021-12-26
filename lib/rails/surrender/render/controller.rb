@@ -14,6 +14,8 @@ module Rails
                       :class_exclude,
                       :history
 
+        alias_method :reload_resource?, :reload_resource
+
         def initialize(
           resource_class: nil,
           reload_resource: false,
@@ -72,6 +74,17 @@ module Rails
 
         def nested_user_includes
           select_nested_from(user_include)
+        end
+
+        def local_excludes
+         local_ctrl_excludes.dup
+           .push(local_user_excludes)
+           .push(local_class_excludes)
+           .flatten.uniq
+        end
+
+        def exclude_locally?(key)
+          local_excludes.include?(key) && !local_user_includes.include?(key)
         end
 
         private
