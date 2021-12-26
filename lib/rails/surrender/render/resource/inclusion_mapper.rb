@@ -4,6 +4,7 @@ module Rails
   module Surrender
     module Render
       class Resource
+        # Builds a complete map of the resources needed to fulfill the request, for supplying to ActiveRecord.includes
         class InclusionMapper
           attr_reader :resource_class, :control
 
@@ -15,7 +16,7 @@ module Rails
             @control = control
           end
 
-          def includes
+          def parse
             control.history = control.history.dup.push resource_class
 
             user_include_here = control.local_user_includes
@@ -50,9 +51,9 @@ module Rails
                 history: control.history.dup.push(element.klass)
               )
 
-              nested = InclusionMapper.new(resource_class: element.klass, control: item_control).includes
+              nested = InclusionMapper.new(resource_class: element.klass, control: item_control).parse
 
-              includes << nested.size.zero? ? element.name : { element.name => nested }
+              includes << (nested.size.zero? ? element.name : { element.name => nested })
             end
 
             includes.sort_by { |x| x.is_a?(Symbol) ? 0 : 1 }

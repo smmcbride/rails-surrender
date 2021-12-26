@@ -41,9 +41,9 @@ module Rails
                                  ctrl_include: include
                                )
 
-                               Render::Resource.render(resource: resource,
-                                                       current_ability: current_ability,
-                                                       render_control: control)
+                               Render::Resource.new(resource: resource,
+                                                    current_ability: current_ability,
+                                                    render_control: control).parse
                              end
 
         # Allows the calling method to decorate the response data before returning the result

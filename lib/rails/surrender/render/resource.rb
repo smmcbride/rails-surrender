@@ -3,48 +3,55 @@
 module Rails
   module Surrender
     module Render
+      # Rendering a resource, and it's various nested components, according to the given control params.
       class Resource
-        def self.render(resource:, current_ability:, render_control:)
-          @ability = current_ability
+        attr_reader :resource, :current_ability, :render_control
 
-          data =
-            if resource.nil?
-              {}
-            elsif resource.is_a?(Hash) || resource.is_a?(Array)
-              resource
-            elsif resource.is_a? ActiveRecord::Relation
-              includes = InclusionMapper.new(resource_class: resource.klass, control: render_control).includes
-              render_collection(resource: resource.includes(includes), control: render_control)
-            else
-              # Reloading the instance here allows us to take advantage of the eager loading
-              # capabilities of ActiveRecord with our 'includes' hash to prevent N+1 queries.
-              # This can save a TON of response time when the data sets begin to get large.
-              if render_control.reload_resource?
-                includes = InclusionMapper.new(resource_class: resource.class, control: render_control).includes
-                resource = resource.class.includes(includes).find_by_id(resource.id)
-              end
-
-              render_instance(resource: resource, control: render_control)
-            end
-
-          Response.new(data: data)
+        def initialize(resource:, current_ability:, render_control:)
+          @resource = resource
+          @current_ability = current_ability
+          @render_control  = render_control
         end
 
-        def self.render_collection(resource:, control:)
+        def parse
+          if resource.nil?
+            Response.new(data: {})
+          elsif resource.is_a?(Hash) || resource.is_a?(Array)
+            Response.new(data: resource)
+          elsif resource.is_a?(ActiveRecord::Relation)
+            includes = InclusionMapper.new(resource_class: resource.klass, control: render_control).parse
+            data = render_collection(resource: @resource.includes(includes), control: render_control)
+            Response.new(data: data)
+          else
+            # Reloading the instance here allows us to take advantage of the eager loading
+            # capabilities of ActiveRecord with our 'includes' hash to prevent N+1 queries.
+            # This can save a TON of response time when the data sets begin to get large.
+            if render_control.reload_resource?
+              includes = InclusionMapper.new(resource_class: resource.class, control: render_control).parse
+              @resource = resource.class.includes(includes).find_by_id(resource.id)
+            end
+
+            data = render_instance(resource: resource, control: render_control)
+            Response.new(data: data)
+          end
+        end
+
+        private
+
+        def render_collection(resource:, control:)
           return nil if resource.nil?
 
           resource.map { |x| render_instance(resource: x, control: control) }
         end
 
-        def self.render_instance(resource:, control:)
+        def render_instance(resource:, control:)
           return nil if resource.nil?
 
           resource_class = resource.class
           control.class_exclude.push(resource_class.surrender_skip_expands.dup).flatten!.uniq!
 
           # get to the root subclass for sti models and store that as history
-          history_class = resource_class
-          history_class = history_class.superclass until history_class.superclass == ActiveRecord::Base
+          history_class = superclass_for(resource_class)
 
           class_history = control.history.dup.push history_class
 
@@ -95,17 +102,13 @@ module Rails
           included_attrs.push(resource_class.surrender_attributes).flatten!.uniq!
 
           # MINUS excluded attributes
-          included_attrs.reject! do |attr|
-            attr.in?(control.local_user_excludes) || (attr.in?(control.local_ctrl_excludes) && !attr.in?(control.local_user_includes))
-          end
+          included_attrs.reject! { |attr| control.exclude_locally?(attr) }
 
-          included_attrs.each do |a|
-            result[a.to_sym] = resource.send(a)
-          end
+          included_attrs.each { |a| result[a.to_sym] = resource.send(a) }
 
           expandings = included_expands
           resource_class.surrender_expands.each do |exp|
-            # add the class expnsions unless the expandings already has a more complex expansion request with this key
+            # add the class expansions unless the expandings already has a more complex expansion request with this key
             expandings << exp unless expandings.select { |a| a.is_a? Hash }
                                                .map(&:keys)
                                                .flatten
@@ -128,33 +131,23 @@ module Rails
               # skip classes in history stack to prevent circular rendering.
               next if class_history.include? nested_resource_class
 
-              nested_user_exclude  = control.nested_user_excludes[key]  || []
-              nested_ctrl_exclude  = control.nested_ctrl_excludes[key]  || []
-              nested_class_exclude = control.nested_class_excludes[key] || []
+              nested_control = Controller.new(
+                ctrl_include: value, # this is the merge of user_include and ctrl_include from input
+                history: class_history,
+                user_exclude: control.nested_user_excludes[key]  || [],
+                ctrl_exclude: control.nested_ctrl_excludes[key]  || [],
+                class_exclude: control.nested_class_excludes[key] || []
+              )
 
               if resource.class.reflections[key.to_s].try(:collection?)
-                collection = resource.send(key.to_sym).select { |i| @ability.can? :read, i }
-                collection_control = Controller.new(
-                  ctrl_include: value, # this is the merge of user_include and ctrl_include from input
-                  history: class_history,
-                  user_exclude: nested_user_exclude,
-                  ctrl_exclude: nested_ctrl_exclude,
-                  class_exclude: nested_class_exclude
-                )
-                result[key.to_sym] = render_collection(resource: collection, control: collection_control)
+                collection = resource.send(key.to_sym).select { |i| current_ability.can? :read, i }
+                result[key.to_sym] = render_collection(resource: collection, control: nested_control)
               else
                 instance = resource.send(key)
                 next if class_history.include? instance.class
 
-                if @ability.can?(:read, instance)
-                  instance_control = Controller.new(
-                    ctrl_include: value, # this is the merge of user_include and ctrl_include from input
-                    history: class_history,
-                    user_exclude: nested_user_exclude,
-                    ctrl_exclude: nested_ctrl_exclude,
-                    class_exclude: nested_class_exclude
-                  )
-                  result[key.to_sym] = render_instance(resource: instance, control: instance_control)
+                if current_ability.can?(:read, instance)
+                  result[key.to_sym] = render_instance(resource: instance, control: nested_control)
                 elsif instance.nil?
                   result[key.to_sym] = nil # represent an associated element as null if it's missing
                 end
@@ -162,6 +155,10 @@ module Rails
             end
           end
           result
+        end
+
+        def superclass_for(resource_class)
+          resource_class.superclass until resource_class.superclass.in? [ActiveRecord::Base, ApplicationRecord]
         end
       end
     end

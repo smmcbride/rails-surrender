@@ -3,6 +3,7 @@
 module Rails
   module Surrender
     module Render
+      # Rendering a count of resources.
       class Count
         attr_reader :resource
 

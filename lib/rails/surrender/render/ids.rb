@@ -3,6 +3,7 @@
 module Rails
   module Surrender
     module Render
+      # Rendering the IDs of the requested resources.
       class Ids
         attr_reader :resource
 

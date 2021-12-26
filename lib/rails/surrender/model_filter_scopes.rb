@@ -3,6 +3,7 @@
 # Add filter_by_date_(to/from/before/after) methods for all *_at columns
 module Rails
   module Surrender
+    # apply filter scopes to the model
     module ModelFilterScopes
       def self.included(base)
         base.extend(ClassMethods)

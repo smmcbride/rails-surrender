@@ -2,6 +2,7 @@
 
 module Rails
   module Surrender
+    # Aad methods to the model class to describe how the model renders.
     module ModelAdditions
       def self.included(base)
         attr_accessor :surrender_attributes
