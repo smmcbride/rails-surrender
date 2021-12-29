@@ -8,5 +8,3 @@ en:
           not_available: "%{param} is not a valid filter parameter."
         sort:
           invalid_column: "%{param} is not a valid sort parameter."
-
-

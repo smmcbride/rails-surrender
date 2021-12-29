@@ -32,7 +32,6 @@ module Rails
                              elsif parsed_query_params.ids?
                                Render::Ids.new(resource).parse
                              else
-
                                control = Render::Controller.new(
                                  reload_resource: reload,
                                  user_exclude: parsed_query_params.exclude,

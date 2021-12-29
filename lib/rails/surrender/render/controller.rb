@@ -90,11 +90,11 @@ module Rails
         private
 
         def select_locals_from(list)
-          list.select { |x| x.is_a?(String) || x.is_a?(Symbol) }.map(&:to_sym).uniq
+          list.map { |x| x.is_a?(Hash) ? x.keys : x }.flatten.map(&:to_sym).uniq
         end
 
         def select_nested_from(list)
-          list.reject { |x| x.is_a?(String) || x.is_a?(Symbol) }.reduce({}, :merge).symbolize_keys
+          list.select { |x| x.is_a? Hash }.reduce({}, :merge).symbolize_keys
         end
       end
     end
