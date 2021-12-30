@@ -72,8 +72,16 @@ module Rails
           select_locals_from(user_include)
         end
 
+        def invalid_local_user_includes
+          local_user_includes.select { |include| attribute_type(include) == :none }
+        end
+
         def nested_user_includes
           select_nested_from(user_include)
+        end
+
+        def nested_includes
+          nested_user_includes.deep_merge(nested_ctrl_includes)
         end
 
         def local_excludes
@@ -87,7 +95,38 @@ module Rails
           local_excludes.include?(key) && !local_user_includes.include?(key)
         end
 
+        def locally_included_attributes
+          [].push(local_user_includes.select { |i| attribute_type(i) == :include })
+            .push(local_ctrl_includes.select { |i| attribute_type(i) == :include })
+            .push(resource_class.surrender_attributes)
+            .flatten
+            .uniq
+            .reject { |attr| exclude_locally?(attr) }
+        end
+
+        def locally_included_expands
+          attrs = [].push(local_user_includes.select { |i| attribute_type(i) == :expand })
+                    .push(local_ctrl_includes.select { |i| attribute_type(i) == :expand })
+                    .push(resource_class.surrender_expands)
+                    .flatten.uniq
+
+          nested_includes.each do |key, value|
+            attrs.delete(key)
+            attrs.push(key => value)
+          end
+
+          attrs.map { |attr| attr.is_a?(Symbol) ? { attr => [] } : attr }
+        end
+
         private
+
+        def attribute_type(attr)
+          return :expand if resource_class.reflections.keys.include? attr.to_s
+          return :include if resource_class.attribute_names.include? attr.to_s
+          return :include if resource_class.instance_methods.include? attr.to_s
+
+          :none
+        end
 
         def select_locals_from(list)
           list.map { |x| x.is_a?(Hash) ? x.keys : x }.flatten.map(&:to_sym).uniq

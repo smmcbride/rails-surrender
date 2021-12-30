@@ -33,6 +33,7 @@ module Rails
                                Render::Ids.new(resource).parse
                              else
                                control = Render::Controller.new(
+                                 resource_class: resource_class(resource),
                                  reload_resource: reload,
                                  user_exclude: parsed_query_params.exclude,
                                  user_include: parsed_query_params.include,
@@ -52,6 +53,10 @@ module Rails
       end
 
       private
+
+      def resource_class(resource)
+        resource.try(:klass) || resource.class
+      end
 
       def skip_pagination
         @will_paginate = false

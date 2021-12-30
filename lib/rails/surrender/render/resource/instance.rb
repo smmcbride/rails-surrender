@@ -25,70 +25,12 @@ module Rails
 
             class_history = control.history.dup.push history_class
 
-            included_attrs   = []
-            included_expands = []
+            validate_user_includes!
 
-            control.user_include.each do |i|
-              case i
-              when String, Symbol # individual attribute, or association
-                if resource_class.reflections.keys.include? i.to_s
-                  unless resource_class.can_call_expand? i.to_sym
-                    raise Error, I18n.t('surrender.error.query_string.include.not_available', params: { a: i })
-                  end
-
-                  included_expands << i.to_sym
-                elsif resource_class.attribute_names.include?(i) || resource_class.instance_methods.include?(i.to_sym)
-                  unless resource_class.can_call_attribute? i.to_sym
-                    raise Error, I18n.t('surrender.error.query_string.include.not_available', params: { a: i })
-                  end
-
-                  included_attrs << i.to_sym
-                else
-                  raise Error, I18n.t('surrender.error.query_string.include.invalid', params: { a: i })
-                end
-              when Hash # expanded attribute with inner details
-                included_expands << i
-              end
-            end
-
-            # ctrl_includes come from the controller and bypass the 'can_call' checks.
-            control.ctrl_include.each do |i|
-              case i
-              when String, Symbol # individual attribute, or association
-                if resource_class.reflections.keys.include? i.to_s
-                  included_expands << i.to_sym
-                elsif resource_class.attribute_names.include?(i) || resource_class.instance_methods.include?(i.to_sym)
-                  included_attrs << i.to_sym
-                end
-              when Hash # expanded attribute with inner details
-                included_expands << i
-              end
-            end
-
-            # Hash to store all the values
             result = {}
+            control.locally_included_attributes.each { |attr| result[attr.to_sym] = resource.send(attr) }
 
-            # PLUS all the included attributes and the models default attributes
-            included_attrs.push(resource_class.surrender_attributes).flatten!.uniq!
-
-            # MINUS excluded attributes
-            included_attrs.reject! { |attr| control.exclude_locally?(attr) }
-
-            included_attrs.each { |a| result[a.to_sym] = resource.send(a) }
-
-            expandings = included_expands
-            resource_class.surrender_expands.each do |exp|
-              # add the class expansions unless _expandings_ already has a more complex expansion request with this key
-              expandings << exp unless expandings.select { |a| a.is_a? Hash }
-                                                 .map(&:keys)
-                                                 .flatten
-                                                 .map(&:to_sym)
-                                                 .include? exp.to_sym
-            end
-
-            expandings.each do |e|
-              e = { e.to_sym => [] } if e.is_a?(Symbol)
-
+            control.locally_included_expands.each do |e|
               e.each do |key, value|
                 next if control.exclude_locally?(key)
 
@@ -102,6 +44,7 @@ module Rails
                 next if class_history.include? nested_resource_class
 
                 nested_control = Controller.new(
+                  resource_class: nested_resource_class,
                   ctrl_include: value, # this is the merge of user_include and ctrl_include from input
                   history: class_history,
                   user_exclude: control.nested_user_excludes[key]  || [],
@@ -130,6 +73,12 @@ module Rails
           end
 
           private
+
+          def validate_user_includes!
+            return if control.invalid_local_user_includes.empty?
+
+            raise Error, I18n.t('surrender.error.query_string.include.not_available', param: include)
+          end
 
           def superclass_for(resource_class)
             resource_class.superclass until resource_class.superclass.in? [ActiveRecord::Base, ApplicationRecord]
