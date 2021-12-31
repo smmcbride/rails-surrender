@@ -32,7 +32,7 @@ module Rails
                              elsif parsed_query_params.ids?
                                Render::Ids.new(resource).parse
                              else
-                               control = Render::Controller.new(
+                               config = Render::Configuration.new(
                                  resource_class: resource_class(resource),
                                  reload_resource: reload,
                                  user_exclude: parsed_query_params.exclude,
@@ -42,8 +42,8 @@ module Rails
                                )
 
                                Render::Resource.new(resource: resource,
-                                                    current_ability: current_ability,
-                                                    render_control: control).parse
+                                                    ability: current_ability,
+                                                    config: config).parse
                              end
 
         # Allows the calling method to decorate the response data before returning the result

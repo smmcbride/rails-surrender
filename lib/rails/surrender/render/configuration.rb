@@ -3,8 +3,8 @@
 module Rails
   module Surrender
     module Render
-      # Container for control structure when rendering or generating the inclusion object.
-      class Controller
+      # Container for config structure when rendering or generating the inclusion object.
+      class Configuration
         attr_accessor :resource_class,
                       :reload_resource,
                       :user_exclude,

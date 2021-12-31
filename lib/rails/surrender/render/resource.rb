@@ -7,14 +7,14 @@ require_relative 'resource/instance'
 module Rails
   module Surrender
     module Render
-      # Rendering a resource, and it's various nested components, according to the given control params.
+      # Rendering a resource, and it's various nested components, according to the given config params.
       class Resource
-        attr_reader :resource, :current_ability, :render_control
+        attr_reader :resource, :ability, :config
 
-        def initialize(resource:, current_ability:, render_control:)
+        def initialize(resource:, ability:, config:)
           @resource = resource
-          @current_ability = current_ability
-          @render_control  = render_control
+          @ability = ability
+          @config  = config
         end
 
         def parse
@@ -30,23 +30,23 @@ module Rails
         private
 
         def collection_data
-          includes = InclusionMapper.new(resource_class: resource.klass, control: render_control).parse
+          includes = InclusionMapper.new(resource_class: resource.klass, config: config).parse
           data = @resource.includes(includes)
-          Collection.new(resource: data, control: render_control, ability: current_ability).render
+          Collection.new(resource: data, config: config, ability: ability).render
         end
 
         def instance_data
           # Reloading the instance here allows us to take advantage of the eager loading
           # capabilities of ActiveRecord with our 'includes' hash to prevent N+1 queries.
           # This can save a TON of response time when the data sets begin to get large.
-          data = if render_control.reload_resource?
-                   includes = InclusionMapper.new(resource_class: resource.class, control: render_control).parse
+          data = if config.reload_resource?
+                   includes = InclusionMapper.new(resource_class: resource.class, config: config).parse
                    @resource = resource.class.includes(includes).find_by_id(resource.id)
                  else
                    resource
                  end
 
-          Instance.new(resource: data, control: render_control, ability: current_ability).render
+          Instance.new(resource: data, config: config, ability: ability).render
         end
       end
     end

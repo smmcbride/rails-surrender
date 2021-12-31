@@ -6,18 +6,18 @@ module Rails
       class Resource
         # Renders a collection resource
         class Collection
-          attr_reader :resource, :control, :ability
+          attr_reader :resource, :config, :ability
 
-          def initialize(resource:, control:, ability:)
+          def initialize(resource:, config:, ability:)
             @resource = resource
-            @control = control
+            @config = config
             @ability = ability
           end
 
           def render
             return nil if resource.nil?
 
-            resource.map { |data| Instance.new(resource: data, control: control, ability: ability).render }
+            resource.map { |data| Instance.new(resource: data, config: config, ability: ability).render }
           end
         end
       end
