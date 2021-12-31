@@ -17,31 +17,10 @@ module Rails
           end
 
           def parse
-            control.history = control.history.dup.push resource_class
-
-            user_include_here = control.local_user_includes
-                                       .select { |z| resource_class.reflections.key? z.to_s }
-                                       .map { |e| element_from(e) }
-            ctrl_include_here = control.local_ctrl_includes
-                                       .select { |z| resource_class.reflections.key? z.to_s }
-                                       .map { |e| element_from(e) }
-
+            control.history.push resource_class
             includes = []
-            list = user_include_here +
-                   ctrl_include_here +
-                   resource_class_attributes +
-                   resource_class_expands +
-                   resource_class_subclass_attributes +
-                   resource_class_subclass_expands
-            list.flatten!
-            list.uniq!
-            list.reject! do |x|
-              x.klass.in?(control.history) ||
-                x.name.in?(control.local_user_excludes) ||
-                (x.name.in?(control.local_ctrl_excludes) && !x.name.in?(user_include_here.map(&:name)))
-            end
 
-            list.each do |element|
+            control.things_that_expand.each do |element|
               item_control = Controller.new(
                 resource_class: element.klass,
                 user_include: control.nested_user_includes[element.name] || [],
@@ -57,41 +36,6 @@ module Rails
             end
 
             includes.sort_by { |x| x.is_a?(Symbol) ? 0 : 1 }
-          end
-
-          private
-
-          def resource_class_attributes
-            resource_class.surrender_attributes
-                          .select { |x| x.match /_ids$/ }
-                          .map { |y| y.to_s.sub('_ids', '').pluralize }
-                          .select { |z| z.in? resource_class.reflections.keys }
-                          .map { |e| element_from(e) }
-          end
-
-          def resource_class_expands
-            resource_class.surrender_expands.map { |e| element_from(e) }
-          end
-
-          def resource_class_subclass_attributes
-            resource_class.subclasses.map do |sc|
-              sc.surrender_attributes
-                .select { |x| x.match /_ids$/ }
-                .map { |y| y.to_s.sub('_ids', '').pluralize }
-                .select { |z| z.in? sc.reflections.keys }
-                .map { |e| element_from(e, klass: sc) }
-            end
-          end
-
-          def resource_class_subclass_expands
-            resource_class.subclasses
-                          .map do |sc|
-              sc.surrender_expands.map { |e| element_from(e, klass: sc) }
-            end
-          end
-
-          def element_from(item, klass: resource_class)
-            Element.new name: item, klass: klass.reflections[item.to_s].klass
           end
         end
       end

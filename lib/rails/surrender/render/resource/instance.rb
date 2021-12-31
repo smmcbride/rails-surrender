@@ -18,54 +18,50 @@ module Rails
             return nil if resource.nil?
 
             resource_class = resource.class
-            control.class_exclude.push(resource_class.surrender_skip_expands.dup).flatten!.uniq!
 
             # get to the root subclass for sti models and store that as history
             history_class = superclass_for(resource_class)
 
-            class_history = control.history.dup.push history_class
+            control.history.push history_class
 
             validate_user_includes!
 
             result = {}
             control.locally_included_attributes.each { |attr| result[attr.to_sym] = resource.send(attr) }
 
-            control.locally_included_expands.each do |e|
-              e.each do |key, value|
-                next if control.exclude_locally?(key)
+            control.locally_included_expands.each do |key, value|
+              next if control.exclude_locally?(key)
 
-                begin
-                  nested_resource_class = resource_class.reflections[key.to_s].klass
-                rescue NoMethodError
-                  nested_resource_class = resource.send(key).class
-                end
+              begin
+                nested_resource_class = resource_class.reflections[key.to_s].klass
+              rescue NoMethodError
+                nested_resource_class = resource.send(key).class
+              end
 
-                # skip classes in history stack to prevent circular rendering.
-                next if class_history.include? nested_resource_class
+              # skip classes in history stack to prevent circular rendering.
+              next if control.history.include? nested_resource_class
 
-                nested_control = Controller.new(
-                  resource_class: nested_resource_class,
-                  ctrl_include: value, # this is the merge of user_include and ctrl_include from input
-                  history: class_history,
-                  user_exclude: control.nested_user_excludes[key]  || [],
-                  ctrl_exclude: control.nested_ctrl_excludes[key]  || [],
-                  class_exclude: control.nested_class_excludes[key] || []
-                )
+              nested_control = Controller.new(
+                resource_class: nested_resource_class,
+                ctrl_include: value, # this is the merge of user_include and ctrl_include from input
+                history: control.history,
+                user_exclude: control.nested_user_excludes[key]  || [],
+                ctrl_exclude: control.nested_ctrl_excludes[key]  || []
+              )
 
-                if resource.class.reflections[key.to_s].try(:collection?)
-                  collection = resource.send(key.to_sym).select { |i| ability.can? :read, i }
+              if resource.class.reflections[key.to_s].try(:collection?)
+                collection = resource.send(key.to_sym).select { |i| ability.can? :read, i }
+                result[key.to_sym] =
+                  Collection.new(resource: collection, control: nested_control, ability: ability).render
+              else
+                instance = resource.send(key)
+                next if class_history.include? instance.class
+
+                if ability.can?(:read, instance)
                   result[key.to_sym] =
-                    Collection.new(resource: collection, control: nested_control, ability: ability).render
-                else
-                  instance = resource.send(key)
-                  next if class_history.include? instance.class
-
-                  if ability.can?(:read, instance)
-                    result[key.to_sym] =
-                      Instance.new(resource: instance, control: nested_control, ability: ability).render
-                  elsif instance.nil?
-                    result[key.to_sym] = nil # represent an associated element as null if it's missing
-                  end
+                    Instance.new(resource: instance, control: nested_control, ability: ability).render
+                elsif instance.nil?
+                  result[key.to_sym] = nil # represent an associated element as null if it's missing
                 end
               end
             end

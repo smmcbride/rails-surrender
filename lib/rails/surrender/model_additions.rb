@@ -7,7 +7,6 @@ module Rails
       def self.included(base)
         attr_accessor :surrender_attributes
         attr_accessor :surrender_expands
-        attr_accessor :surrender_skip_expands
         attr_accessor :surrender_available_attributes
         attr_accessor :surrender_available_expands
 
@@ -20,7 +19,7 @@ module Rails
 
           # Run through the various lists of attributes and assign them to the rendering context
           # If the superclass has attributes then consume those as well.
-          %w[attributes expands skip_expands available_attributes available_expands].each do |directive|
+          %w[attributes expands available_attributes available_expands].each do |directive|
             surrender_directive = "surrender_#{directive}"
             list = []
             if superclass.instance_variable_defined?("@#{surrender_directive}")
@@ -41,10 +40,6 @@ module Rails
 
         def surrender_expands
           @surrender_expands ||= []
-        end
-
-        def surrender_skip_expands
-          @surrender_skip_expands ||= []
         end
 
         def surrender_available_expands
