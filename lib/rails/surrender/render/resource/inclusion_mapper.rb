@@ -20,7 +20,7 @@ module Rails
             config.history.push resource_class
             includes = []
 
-            config.things_that_expand.each do |element|
+            config.expanding_elements.each do |element|
               item_config = Configuration.new(
                 resource_class: element.klass,
                 user_include: config.nested_user_includes[element.name] || [],

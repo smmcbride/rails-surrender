@@ -6,5 +6,7 @@ en:
         incorrect_format: "The %{param} parameter was improperly formatted."
         filter:
           not_available: "%{param} is not a valid filter parameter."
+        include:
+          not_available: "%{param} is not a valid include parameter."
         sort:
           invalid_column: "%{param} is not a valid sort parameter."

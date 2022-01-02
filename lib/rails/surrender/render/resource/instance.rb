@@ -15,53 +15,30 @@ module Rails
           end
 
           def render
-            return nil if resource.nil?
-
-            resource_class = resource.class
-
-            # get to the root subclass for sti models and store that as history
-            history_class = superclass_for(resource_class)
-
             config.history.push history_class
-
-            validate_user_includes!
 
             result = {}
             config.locally_included_attributes.each { |attr| result[attr.to_sym] = resource.send(attr) }
 
-            config.locally_included_expands.each do |key, value|
+            config.locally_included_expands.each_key do |key|
               next if config.exclude_locally?(key)
 
-              begin
-                nested_resource_class = resource_class.reflections[key.to_s].klass
-              rescue NoMethodError
-                nested_resource_class = resource.send(key).class
-              end
-
-              # skip classes in history stack to prevent circular rendering.
+              nested_resource_class = nested_class_for(resource, key)
               next if config.history.include? nested_resource_class
 
-              nested_config = Configuration.new(
-                resource_class: nested_resource_class,
-                ctrl_include: value, # this is the merge of user_include and ctrl_include from input
-                history: config.history,
-                user_exclude: config.nested_user_excludes[key]  || [],
-                ctrl_exclude: config.nested_ctrl_excludes[key]  || []
-              )
+              nested_config = nested_config_for(nested_resource_class, key)
 
               if resource.class.reflections[key.to_s].try(:collection?)
                 collection = resource.send(key.to_sym).select { |i| ability.can? :read, i }
-                result[key.to_sym] =
-                  Collection.new(resource: collection, config: nested_config, ability: ability).render
+                result[key] = Collection.new(resource: collection, config: nested_config, ability: ability).render
               else
                 instance = resource.send(key)
                 next if class_history.include? instance.class
 
                 if ability.can?(:read, instance)
-                  result[key.to_sym] =
-                    Instance.new(resource: instance, config: nested_config, ability: ability).render
+                  result[key] = Instance.new(resource: instance, config: nested_config, ability: ability).render
                 elsif instance.nil?
-                  result[key.to_sym] = nil # represent an associated element as null if it's missing
+                  result[key] = nil # represent an associated element as null if it's missing
                 end
               end
             end
@@ -70,14 +47,26 @@ module Rails
 
           private
 
-          def validate_user_includes!
-            return if config.invalid_local_user_includes.empty?
-
-            raise Error, I18n.t('surrender.error.query_string.include.not_available', param: include)
+          def nested_class_for(resource, key)
+            resource.class.reflections[key.to_s].klass
+          rescue NoMethodError
+            resource.send(key).class
           end
 
-          def superclass_for(resource_class)
-            resource_class.superclass until resource_class.superclass.in? [ActiveRecord::Base, ApplicationRecord]
+          def nested_config_for(nested_resource_class, key)
+            Configuration.new(
+              resource_class: nested_resource_class,
+              user_include: config.nested_user_includes[key]  || [],
+              ctrl_include: config.nested_ctrl_includes[key]  || [],
+              user_exclude: config.nested_user_excludes[key]  || [],
+              ctrl_exclude: config.nested_ctrl_excludes[key]  || [],
+              history: config.history
+            )
+          end
+
+          # get to the root subclass for sti models and store that as history
+          def history_class
+            resource.class.superclass until resource.class.superclass.in? [ActiveRecord::Base, ApplicationRecord]
           end
         end
       end

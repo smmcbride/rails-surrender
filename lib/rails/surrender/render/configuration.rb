@@ -33,157 +33,46 @@ module Rails
           @ctrl_exclude = ctrl_exclude.compact
           @ctrl_include = ctrl_include
           @history = history
+
+          validate_user_includes!
         end
 
-        # user include is a list with:
-        #   symbols that can be attributs, names that expand, or things that need includes (*_ids)
-        #   hashes with one key/value pair.  The hash key is an expansion to include
-
-        # user excludes is a list with
-        #   symbols that can be attributs, names that expand, or things that need excludes (*_ids)
-        #   hashes with one key/value pair.  The hash key is an expansion to exclude
-
-        # ctrl include is a list with:
-        #   symbols that can be attributs, names that expand, or things that need includes (*_ids)
-        #   hashes with one key/value pair.  The hask key is an expansion to include
-
-        # ctrl exclude is a list with:
-        #   symbols that can be attributs, names that expand, or things that need excludes (*_ids)
-        #   hashes with one key/value pair.  The hask key is an expansion to exclude
-
-        # resource_class has
-        #   surrender_attributes which is a list of symbols to render
-        #   surrender_expands whih is a list of symbols that are expansions
-        #   surrender_available_attributes which is a list of attributes the user can request
-        #   surrender_available_expands which is a list of expands the user can request
-        #
-        # history is a llist of class names that have already been called.
-        #
-        # when building includes:
-        #   resource class expands
-        #   ++ resourcce class subclass expands
-        #   + resource class attributes that expand
-        #   + resource class subclass attributes that expand
-        #   + user includes attributes that expand
-        #   + ctrl includes attributes that expand
-        #   - klasses that are in the history
-        #   - user exlcudes
-        #   - ctrl excludes that are not user includes
-
-        # when rendering we need:
-        #   a list of attributes that get rendered
-        #   a hash of expansions where the key is the method to exapnd, and the value gets passed to the next iteration
-
-        def things_that_expand
-          elements = resource_class_surrender_attributes_that_expand +
-                     resource_class_subclass_surrender_attributes_that_expand +
-                     resource_class_subclass_surrender_expands +
-                     user_includes_that_expand +
-                     ctrl_includes_that_expand
-
-          elements.reject! do |element|
+        def expanding_elements
+          list = resource_class_surrender_attributes_that_expand +
+                 resource_class_surrender_expands +
+                 resource_class_subclass_surrender_attributes_that_expand +
+                 resource_class_subclass_surrender_expands +
+                 user_includes_that_expand +
+                 ctrl_includes_that_expand
+                 .flatten.uniq
+          list
+            .map { |e| element_from(e) }
+            .reject do |element|
             element.klass.in?(history) ||
               element.name.in?(truly_local_user_excludes) ||
               (element.name.in?(truly_local_ctrl_excludes) && !element.name.in?(local_user_includes))
           end
-
-          elements
-        end
-
-        def user_includes_that_expand
-          local_user_includes.select { |attr| attribute_type(attr) == :expand }
-                             .map { |e| element_from(e) }
-        end
-
-        def ctrl_includes_that_expand
-          local_ctrl_includes.select { |attr| attribute_type(attr) == :expand }
-                             .map { |e| element_from(e) }
-        end
-
-        def resource_class_surrender_attributes_that_expand
-          resource_class.surrender_attributes
-                        .select { |attr| attr.match /_ids$/ }
-                        .map { |attr| attr.to_s.sub('_ids', '').pluralize }
-                        .select { |attr| attribute_type(attr) == :expand }
-                        .map { |e| element_from(e) }
-        end
-
-        def resource_class_subclass_surrender_attributes_that_expand
-          resource_class.subclasses.map do |subclass|
-            subclass.surrender_attributes
-                    .select { |attr| attr.match /_ids$/ }
-                    .map { |attr| attr.to_s.sub('_ids', '').pluralize }
-                    .select { |attr| attr.in? subclass.reflections.keys }
-                    .map { |e| element_from(e) }
-          end
-        end
-
-        def resource_class_subclass_surrender_expands
-          resource_class.subclasses.map(&:surrender_expands)
-                        .map { |e| element_from(e) }
-        end
-
-        def truly_local_ctrl_excludes
-          select_truly_locals_from(ctrl_exclude)
-        end
-
-        def local_ctrl_excludes
-          select_locals_from(ctrl_exclude)
-        end
-
-        def nested_ctrl_excludes
-          select_nested_from(ctrl_exclude)
-        end
-
-        def local_ctrl_includes
-          select_locals_from(ctrl_include)
-        end
-
-        def nested_ctrl_includes
-          select_nested_from(ctrl_include)
-        end
-
-        def truly_local_user_excludes
-          select_truly_locals_from(user_exclude)
-        end
-
-        def local_user_excludes
-          select_locals_from(user_exclude)
-        end
-
-        def nested_user_excludes
-          select_nested_from(user_exclude)
-        end
-
-        def local_user_includes
-          select_locals_from(user_include)
-        end
-
-        def invalid_local_user_includes
-          local_user_includes.select { |include| attribute_type(include) == :none }
         end
 
         def nested_user_includes
           select_nested_from(user_include)
         end
 
-        def nested_includes
-          nested_user_includes.deep_merge(nested_ctrl_includes)
+        def nested_ctrl_includes
+          select_nested_from(ctrl_include)
         end
 
-        def local_excludes
-          local_ctrl_excludes.dup
-                             .push(local_user_excludes)
-                             .flatten.uniq
+        def nested_user_excludes
+          select_nested_from(user_exclude)
         end
 
-        def exclude_locally?(key)
-          local_excludes.include?(key) && !local_user_includes.include?(key)
+        def nested_ctrl_excludes
+          select_nested_from(ctrl_exclude)
         end
 
         def locally_included_attributes
-          [].push(local_user_includes.select { |i| attribute_type(i) == :include })
-            .push(local_ctrl_includes.select { |i| attribute_type(i) == :include })
+          [].push(user_include_local_attributes)
+            .push(ctrl_include_local_attributes)
             .push(resource_class.surrender_attributes)
             .flatten
             .uniq
@@ -199,10 +88,100 @@ module Rails
                              .deep_merge(nested_includes)
         end
 
+        def exclude_locally?(key)
+          local_excludes.include?(key) && !local_user_includes.include?(key)
+        end
+
         private
 
-        def element_from(item, klass: resource_class)
-          Element.new name: item, klass: klass.reflections[item.to_s].klass
+        def user_includes_that_expand
+          local_user_includes.select { |attr| attribute_type(attr) == :expand }
+        end
+
+        def ctrl_includes_that_expand
+          local_ctrl_includes.select { |attr| attribute_type(attr) == :expand }
+        end
+
+        def resource_class_surrender_attributes_that_expand
+          resource_class.surrender_attributes
+                        .select { |attr| attr.match /_ids$/ }
+                        .map { |attr| attr.to_s.sub('_ids', '').pluralize }
+                        .select { |attr| attribute_type(attr) == :expand }
+        end
+
+        def resource_class_surrender_expands
+          resource_class.surrender_expands
+        end
+
+        def resource_class_subclass_surrender_attributes_that_expand
+          resource_class.subclasses.map do |subclass|
+            subclass.surrender_attributes
+                    .select { |attr| attr.match /_ids$/ }
+                    .map { |attr| attr.to_s.sub('_ids', '').pluralize }
+                    .select { |attr| attr.in? subclass.reflections.keys }
+          end
+        end
+
+        def resource_class_subclass_surrender_expands
+          resource_class.subclasses.map(&:surrender_expands)
+        end
+
+        def truly_local_ctrl_excludes
+          terminating_elements_from(ctrl_exclude)
+        end
+
+        def local_ctrl_excludes
+          select_locals_from(ctrl_exclude)
+        end
+
+        def local_ctrl_includes
+          select_locals_from(ctrl_include)
+        end
+
+        def truly_local_user_excludes
+          terminating_elements_from(user_exclude)
+        end
+
+        def local_user_excludes
+          select_locals_from(user_exclude)
+        end
+
+        def local_user_includes
+          select_locals_from(user_include)
+        end
+
+        def nested_includes
+          nested_user_includes.deep_merge(nested_ctrl_includes)
+        end
+
+        def local_excludes
+          local_ctrl_excludes.dup.push(local_user_excludes).flatten.uniq
+        end
+
+        def user_include_local_attributes
+          attrs = local_user_includes.select { |i| attribute_type(i) == :include }
+          unavailable_attrs = (attrs - resource_class.surrender_available_attributes)
+          return attrs if unavailable_attrs.empty?
+
+          raise Error, I18n.t('surrender.error.query_string.include.not_available', param: unavailable_attrs)
+        end
+
+        def ctrl_include_local_attributes
+          local_ctrl_includes.select { |i| attribute_type(i) == :include }
+        end
+
+        def validate_user_includes!
+          return if invalid_local_user_includes.empty?
+
+          raise Error, I18n.t('surrender.error.query_string.include.not_available', param: invalid_local_user_includes)
+        end
+
+        def invalid_local_user_includes
+          local_user_includes.select { |include| attribute_type(include) == :none }
+        end
+
+        def element_from(item)
+          Element.new name: item, klass: resource_class.reflections[item.to_s].klass
         end
 
         def attribute_type(attr)
@@ -213,7 +192,7 @@ module Rails
           :none
         end
 
-        def select_truly_locals_from(list)
+        def terminating_elements_from(list)
           list.reject { |x| x.is_a?(Hash) }.flatten.map(&:to_sym).uniq
         end
 
