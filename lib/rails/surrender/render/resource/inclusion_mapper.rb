@@ -30,7 +30,11 @@ module Rails
                 history: config.history.dup.push(element.klass)
               )
 
-              nested = InclusionMapper.new(resource_class: element.klass, config: item_config).parse
+              nested = if element.continue
+                         InclusionMapper.new(resource_class: element.klass, config: item_config).parse
+                       else
+                         []
+                       end
 
               includes << (nested.size.zero? ? element.name : { element.name => nested })
             end
