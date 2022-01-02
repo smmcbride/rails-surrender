@@ -53,22 +53,6 @@ module Rails
         def surrender_callable_expands
           @surrender_callable_expands ||= (surrender_expands + surrender_available_expands).flatten
         end
-
-        def can_call_attribute?(attr)
-          surrender_callable_attributes.include?(attr.to_sym)
-        end
-
-        def can_call_expand?(attr)
-          surrender_callable_expands.include?(attr.to_sym)
-        end
-
-        def default_response_fields
-          [@surrender_attributes.dup << @surrender_expands].flatten.join(', ')
-        end
-
-        def available_response_fields
-          [@surrender_available_attributes.dup << @surrender_available_expands].flatten.join(', ')
-        end
       end
     end
   end

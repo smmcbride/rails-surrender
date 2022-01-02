@@ -33,7 +33,7 @@ module Rails
                 result[key] = Collection.new(resource: collection, config: nested_config, ability: ability).render
               else
                 instance = resource.send(key)
-                next if class_history.include? instance.class
+                next if config.history.include? instance.class
 
                 if ability.can?(:read, instance)
                   result[key] = Instance.new(resource: instance, config: nested_config, ability: ability).render

@@ -23,17 +23,16 @@ module Rails
           end
 
           def locally_included_attributes
-            [].push(user_included_local_attributes_to_render)
+            [].push(resource_class.surrender_attributes)
               .push(ctrl_included_attributes)
-              .push(resource_class.surrender_attributes)
-              .flatten
-              .uniq
+              .push(user_included_attributes_to_render)
+              .flatten.uniq
               .reject { |attr| exclude_locally?(attr) }
           end
 
           def locally_included_expands
-            [].push(local_user_includes.select { |i| attribute_type(i) == :expand })
-              .push(local_ctrl_includes.select { |i| attribute_type(i) == :expand })
+            [].push(user_included_local_expansions_to_render)
+              .push(ctrl_included_expansions)
               .push(resource_class.surrender_expands)
               .flatten.uniq
               .each_with_object({}) { |key, result| result[key.to_sym] = [] }
@@ -55,16 +54,32 @@ module Rails
             top_level_keys_from(user_include).select { |include| attribute_type(include).in? %i[include associate] }
           end
 
-          def user_included_local_attributes_to_render
+          def user_included_attributes_to_render
             attrs = user_included_attributes
-            unavailable_attrs = (attrs - resource_class.surrender_available_attributes)
+            unavailable_attrs = (attrs - resource_class.surrender_callable_attributes)
             return attrs if unavailable_attrs.empty?
 
             raise Error, I18n.t('surrender.error.query_string.include.not_available', param: unavailable_attrs)
           end
 
+          def user_included_expansions
+            local_user_includes.select { |i| attribute_type(i) == :expand }
+          end
+
+          def user_included_local_expansions_to_render
+            expansions = user_included_expansions
+            unavailable_expansions = (expansions - resource_class.surrender_callable_expands)
+            return expansions if unavailable_expansions.empty?
+
+            raise Error, I18n.t('surrender.error.query_string.include.not_available', param: unavailable_expansions)
+          end
+
           def ctrl_included_attributes
             top_level_keys_from(ctrl_include).select { |include| attribute_type(include).in? %i[include associate] }
+          end
+
+          def ctrl_included_expansions
+            local_ctrl_includes.select { |i| attribute_type(i) == :expand }
           end
         end
       end

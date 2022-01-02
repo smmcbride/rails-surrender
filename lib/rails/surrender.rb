@@ -9,6 +9,7 @@ end
 require 'kaminari'
 require 'oj'
 
+require 'rails/surrender/default_ability'
 require 'rails/surrender/controller_additions'
 require 'rails/surrender/exceptions'
 require 'rails/surrender/model_additions'

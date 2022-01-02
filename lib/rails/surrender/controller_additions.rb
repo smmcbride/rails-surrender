@@ -42,7 +42,7 @@ module Rails
                                )
 
                                Render::Resource.new(resource: resource,
-                                                    ability: current_ability,
+                                                    ability: ability,
                                                     config: config).parse
                              end
 
@@ -53,6 +53,12 @@ module Rails
       end
 
       private
+
+      def ability
+        return current_ability if respond_to?(:current_ability)
+
+        DefaultAbility.new
+      end
 
       def resource_class(resource)
         resource.try(:klass) || resource.class
