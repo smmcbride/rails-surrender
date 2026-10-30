@@ -4,9 +4,9 @@ source 'https://rubygems.org'
 
 gemspec
 
-gem 'codecov', '~> 0.6'
-gem 'rails', '~> 7.0.0'
-gem 'rspec', '~> 3.10'
-gem 'simplecov', '~> 0.21'
-
-gem 'rubocop'
+gem 'appraisal', '~> 2.5', require: false
+gem 'rake', '~> 13.0'
+gem 'rspec-rails', '~> 8.0'
+gem 'rubocop', '~> 1.80', require: false
+gem 'simplecov', '~> 1.3', require: false
+gem 'sqlite3', '~> 2.1'

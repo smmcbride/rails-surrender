@@ -2,9 +2,12 @@ inherit_from: .rubocop_todo.yml
 
 AllCops:
   NewCops: enable
+  SuggestExtensions: false
+  TargetRubyVersion: 3.3
   Exclude:
     - Gemfile
     - Gemfile.lock
+    - 'gemfiles/**/*'
 
 Metrics/BlockLength:
   Exclude:

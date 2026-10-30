@@ -21,11 +21,3 @@ require 'rails/surrender/render/count'
 require 'rails/surrender/render/resource'
 require 'rails/surrender/response'
 require 'rails/surrender/version'
-
-# Load Surrender specific error messages
-locale_path = Dir.glob("#{__dir__}/surrender/config/locales/*.{rb,yml}")
-I18n.load_path += locale_path unless I18n.load_path.include?(locale_path)
-
-# ActiveRecord Patches required for proper functionality
-require 'rails/surrender/config/initializers/active_record_associations_patch'
-require 'rails/surrender/config/initializers/active_record_preloader_patch'

@@ -56,17 +56,18 @@ module Rails
           def nested_config_for(nested_resource_class, key)
             Configuration.new(
               resource_class: nested_resource_class,
-              user_include: config.nested_user_includes[key]  || [],
-              ctrl_include: config.nested_ctrl_includes[key]  || [],
-              user_exclude: config.nested_user_excludes[key]  || [],
-              ctrl_exclude: config.nested_ctrl_excludes[key]  || [],
-              history: config.history
+              user_include: config.nested_user_includes[key] || [],
+              ctrl_include: config.nested_ctrl_includes[key] || [],
+              user_exclude: config.nested_user_excludes[key] || [],
+              ctrl_exclude: config.nested_ctrl_excludes[key] || [],
+              # Each nested resource gets its own copy, so siblings don't see each other in their history.
+              history: config.history.dup
             )
           end
 
-          # get to the root subclass for sti models and store that as history
+          # STI subclasses share their root class's history, so a Novel inside a Book is still circular.
           def history_class
-            resource.class.superclass until resource.class.superclass.in? [ActiveRecord::Base, ApplicationRecord]
+            resource.class.base_class
           end
         end
       end

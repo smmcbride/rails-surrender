@@ -35,7 +35,7 @@ module Rails
               .push(ctrl_included_expansions)
               .push(resource_class.surrender_expands)
               .flatten.uniq
-              .each_with_object({}) { |key, result| result[key.to_sym] = [] }
+              .to_h { |key| [key.to_sym, []] }
               .deep_merge(nested_user_includes)
               .deep_merge(nested_ctrl_includes)
           end

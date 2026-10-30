@@ -36,7 +36,7 @@ module Rails
                          []
                        end
 
-              includes << (nested.size.zero? ? element.name : { element.name => nested })
+              includes << (nested.empty? ? element.name : { element.name => nested })
             end
 
             includes.sort_by { |x| x.is_a?(Symbol) ? 0 : 1 }

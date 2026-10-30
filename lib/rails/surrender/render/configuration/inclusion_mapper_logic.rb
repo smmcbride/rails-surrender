@@ -7,12 +7,12 @@ module Rails
       class Configuration
         module InclusionMapperLogic
           def expanding_elements
-            list = resource_class_surrender_attributes_that_expand +
-                   resource_class_surrender_expands +
-                   resource_class_subclass_surrender_attributes_that_expand +
-                   resource_class_subclass_surrender_expands +
-                   user_included_joins_required +
-                   ctrl_included_joins_required
+            list = (resource_class_surrender_attributes_that_expand +
+                    resource_class_surrender_expands +
+                    resource_class_subclass_surrender_attributes_that_expand +
+                    resource_class_subclass_surrender_expands +
+                    user_included_joins_required +
+                    ctrl_included_joins_required)
                    .flatten.uniq
             list
               .map { |e| element_from(e) }
@@ -26,27 +26,29 @@ module Rails
           private
 
           def resource_class_surrender_attributes_that_expand
-            resource_class.surrender_attributes
-                          .select { |attr| attr.match /_ids$/ }
-                          .map { |attr| attr.to_s.sub('_ids', '').pluralize }
-                          .select { |include| attribute_type(include).in? %i[expand associate] }
+            attributes_that_expand(resource_class)
           end
 
           def resource_class_surrender_expands
             resource_class.surrender_expands
           end
 
+          # Subclass associations are preloaded on the parent's relation, so only those the parent also
+          # defines can be included.
           def resource_class_subclass_surrender_attributes_that_expand
-            resource_class.subclasses.map do |subclass|
-              subclass.surrender_attributes
-                      .select { |attr| attr.match /_ids$/ }
-                      .map { |attr| attr.to_s.sub('_ids', '').pluralize }
-                      .select { |include| attribute_type(include, resource_class: sc).in? %i[expand associate] }
-            end
+            resource_class.subclasses.flat_map { |subclass| attributes_that_expand(subclass) }
           end
 
           def resource_class_subclass_surrender_expands
-            resource_class.subclasses.map(&:surrender_expands)
+            resource_class.subclasses.flat_map(&:surrender_expands)
+                          .select { |expand| attribute_type(expand) == :expand }
+          end
+
+          def attributes_that_expand(klass)
+            klass.surrender_attributes
+                 .select { |attr| attr.end_with?('_ids') }
+                 .map { |attr| attr.to_s.delete_suffix('_ids').pluralize }
+                 .select { |include| attribute_type(include).in? %i[expand associate] }
           end
 
           def user_included_joins_required

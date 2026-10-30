@@ -1,54 +1,72 @@
 # frozen_string_literal: true
 
-# Add filter_by_date_(to/from/before/after) methods for all *_at columns
 module Rails
   module Surrender
-    # apply filter scopes to the model
+    # Adds a filter_by_<column> scope for every column, and filter_by_<name>_to/from/before/after scopes for
+    # date and time columns, where <name> drops any _at suffix.
+    #
+    # The scopes are defined the first time any filter_by_ method is looked up, rather than when the class is
+    # defined, so that loading a model never touches the database.
     module ModelFilterScopes
-      def self.included(base)
-        base.extend(ClassMethods)
-      end
+      extend ActiveSupport::Concern
 
+      FILTER_PREFIX = 'filter_by_'
+
+      # Generates the filter scopes on first lookup.
       module ClassMethods
-        def inherited(child)
-          super
+        # Once the scopes are defined they are ordinary methods, so a missing filter falls through to super
+        # rather than recursing.
+        def respond_to_missing?(name, include_private = false)
+          return super unless surrender_filter_name?(name) && surrender_filter_scopes_pending?
 
-          # Bad things happen if you ask table_exists? to ApplicationRecord while it's loading!
-          # TODO: Add configuration in case ApplicationRecord is _not_ the primary abstract class
-          return if child.name == 'ApplicationRecord'
+          define_surrender_filter_scopes
+          respond_to?(name, include_private)
+        end
 
-          return unless child.table_exists?
+        def method_missing(name, ...)
+          return super unless surrender_filter_name?(name) && surrender_filter_scopes_pending?
 
-          child.instance_eval do
-            # scope to filter by every column name
-            apply_surrender_column_name_scopes(child)
+          define_surrender_filter_scopes
+          public_send(name, ...)
+        end
 
-            # scope to filter by date or time column names
-            apply_surrender_column_datetime_scopes(child)
-          rescue StandardError
-            # TODO: why are tests failing here!!!
+        private
+
+        def surrender_filter_name?(name)
+          name.start_with?(FILTER_PREFIX)
+        end
+
+        def surrender_filter_scopes_pending?
+          !@surrender_filter_scopes_defined && surrender_filterable?
+        end
+
+        def define_surrender_filter_scopes
+          @surrender_filter_scopes_defined = true
+          define_surrender_column_scopes
+          define_surrender_datetime_scopes
+        end
+
+        # ActiveRecord::Base itself is asked whether it responds to scope names while scopes are being defined.
+        def surrender_filterable?
+          self != ActiveRecord::Base && !abstract_class? && table_exists?
+        end
+
+        def define_surrender_column_scopes
+          column_names.each do |column|
+            scope :"#{FILTER_PREFIX}#{column}", ->(value) { where(column => value) }
           end
         end
 
-        def apply_surrender_column_name_scopes(child)
-          child.column_names.each do |column|
-            scope "filter_by_#{column}".to_sym, ->(val) { where({ column.to_sym => val }) }
+        def define_surrender_datetime_scopes
+          columns.select { |column| column.type.in? %i[date datetime] }.map(&:name).each do |column|
+            name = "#{FILTER_PREFIX}#{column.delete_suffix('_at')}"
+            attribute = arel_table[column]
+
+            scope :"#{name}_to", ->(time) { where(attribute.lteq(time)) }
+            scope :"#{name}_from", ->(time) { where(attribute.gteq(time)) }
+            scope :"#{name}_before", ->(time) { where(attribute.lt(time)) }
+            scope :"#{name}_after", ->(time) { where(attribute.gt(time)) }
           end
-        end
-
-        def apply_surrender_column_datetime_scopes(child)
-          with_surrender_datetime_columns(child) do |column|
-            base = column.split(/_at$/).first
-
-            scope "filter_by_#{base}_to".to_sym, ->(time) { where("#{child.table_name}.#{column} <= ?", time) }
-            scope "filter_by_#{base}_from".to_sym, ->(time) { where("#{child.table_name}.#{column} >= ?", time) }
-            scope "filter_by_#{base}_before".to_sym, ->(time) { where("#{child.table_name}.#{column} < ?", time) }
-            scope "filter_by_#{base}_after".to_sym, ->(time) { where("#{child.table_name}.#{column} > ?", time) }
-          end
-        end
-
-        def with_surrender_datetime_columns(child, &block)
-          child.columns.select { |c| c.type.in? %i[date datetime] }.map(&:name).each(&block)
         end
       end
     end
