@@ -15,7 +15,7 @@ module Rails
           end
 
           def render
-            config.history.push history_class
+            config.history.push history_key(resource.class)
 
             result = {}
             config.locally_included_attributes.each { |attr| result[attr.to_sym] = resource.send(attr) }
@@ -24,7 +24,7 @@ module Rails
               next if config.exclude_locally?(key)
 
               nested_resource_class = nested_class_for(resource, key)
-              next if config.history.include? nested_resource_class
+              next if rendered_above?(nested_resource_class)
 
               nested_config = nested_config_for(nested_resource_class, key)
 
@@ -33,7 +33,7 @@ module Rails
                 result[key] = Collection.new(resource: collection, config: nested_config, ability: ability).render
               else
                 instance = resource.send(key)
-                next if config.history.include? instance.class
+                next if rendered_above?(instance.class)
 
                 if ability.can?(:read, instance)
                   result[key] = Instance.new(resource: instance, config: nested_config, ability: ability).render
@@ -56,17 +56,23 @@ module Rails
           def nested_config_for(nested_resource_class, key)
             Configuration.new(
               resource_class: nested_resource_class,
-              user_include: config.nested_user_includes[key]  || [],
-              ctrl_include: config.nested_ctrl_includes[key]  || [],
-              user_exclude: config.nested_user_excludes[key]  || [],
-              ctrl_exclude: config.nested_ctrl_excludes[key]  || [],
-              history: config.history
+              user_include: config.nested_user_includes[key] || [],
+              ctrl_include: config.nested_ctrl_includes[key] || [],
+              user_exclude: config.nested_user_excludes[key] || [],
+              ctrl_exclude: config.nested_ctrl_excludes[key] || [],
+              # Each nested resource gets its own copy, so siblings don't see each other in their history.
+              history: config.history.dup
             )
           end
 
-          # get to the root subclass for sti models and store that as history
-          def history_class
-            resource.class.superclass until resource.class.superclass.in? [ActiveRecord::Base, ApplicationRecord]
+          def rendered_above?(klass)
+            config.history.include?(history_key(klass))
+          end
+
+          # History holds STI base classes, so a Novel inside a Book is still circular. Missing associations
+          # arrive as NilClass, which has no base class.
+          def history_key(klass)
+            klass.try(:base_class) || klass
           end
         end
       end

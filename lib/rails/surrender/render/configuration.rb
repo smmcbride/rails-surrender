@@ -75,7 +75,7 @@ module Rails
           return :expand if klass.reflections.keys.include?(attr.to_s)
           return :associate if klass.reflections.keys.include?(attr.to_s.sub('_ids', '').pluralize)
           return :include if klass.attribute_names.include?(attr.to_s)
-          return :include if klass.instance_methods.include?(attr)
+          return :include if klass.method_defined?(attr)
 
           :none
         end
@@ -85,7 +85,7 @@ module Rails
         end
 
         def next_level_asks_from(list)
-          list.select { |x| x.is_a? Hash }.reduce({}, :merge).symbolize_keys
+          list.grep(Hash).reduce({}, :merge).symbolize_keys
         end
       end
     end

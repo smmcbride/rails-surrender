@@ -1,2 +1,6 @@
 *.gem
 .idea
+Gemfile.lock
+gemfiles/*.lock
+coverage/
+spec/examples.txt

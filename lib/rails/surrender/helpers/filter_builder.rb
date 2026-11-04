@@ -43,7 +43,7 @@ module Rails
       end
 
       def filter_method_id(scope)
-        "#{filter_method(scope)}_id".to_sym
+        :"#{filter_method(scope)}_id"
       end
     end
   end

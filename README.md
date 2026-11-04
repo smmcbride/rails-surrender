@@ -3,10 +3,14 @@ A JSON rendering platform for Rails APIs. Provides many controls through URL que
 API responses from your resources.
 
 ## Requirements
-* Ruby 3.0, 3.1
-* Rails 7.0, 7.1
+* Ruby 3.3 or newer
+* Rails 8.0 or 8.1
 
-Older versions may work fine but have yet to be tested.
+Rails 8.0 is not compatible with version 3 of the `json` gem, so Rails 8.0 apps should keep `json` below 3:
+
+```ruby
+gem 'json', '< 3'
+```
 
 ## Features
 Surrender adds a number of helpful features to API requests, through URL query parameters to craft the structure of the
@@ -149,7 +153,7 @@ Rails ActiveRecord `has_many` or `belongs_to` or similar method call.
 * `available_attributes`: A list of model attributes that can be rendered with the `include` query parameter.
 * `available_expands`: A list of model associations that can be rendered with the `include` query parameter.
 
-An example invocation of the `surreners` method is provided below:
+An example invocation of the `surrenders` method is provided below:
 ```ruby
   surrenders attributes: [:id, :title, :description, :status],
              available_attributes: [:created_at, :updated_at],
@@ -176,5 +180,23 @@ surrender will stop expanding the associations when it recognized that it has al
 same class as the requested child association.
 
 Surrender prevents un-authorized access to associated resources by invoking the `current_ability` rule-set from the 
-CanCanCan gem, if it is used in your Rails project. If CanCanCan is not present it will allow full access to 
-associated resources.
+CanCanCan gem, if it is used in your Rails project. Any controller method named `current_ability`, public or private, 
+that returns an object responding to `can?(:read, record)` is used the same way. If neither is present it will allow 
+full access to associated resources.
+
+## Development
+
+The test suite boots a small Rails app (`spec/dummy`) against an in-memory SQLite database. Run it against the
+latest Rails with:
+
+```sh
+bundle install
+bundle exec rake
+```
+
+`rake` runs both the specs and RuboCop. To run the specs against each supported Rails version:
+
+```sh
+bundle exec appraisal install
+bundle exec appraisal rspec
+```

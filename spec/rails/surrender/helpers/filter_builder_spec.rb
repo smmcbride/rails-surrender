@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe Rails::Surrender::FilterBuilder do
+RSpec.describe Rails::Surrender::FilterBuilder do
   subject { described_class.new(resource: resource, filter: filter) }
 
   let(:resource) { double('ActiveRecord::Relation') }
@@ -37,7 +37,7 @@ describe Rails::Surrender::FilterBuilder do
       end
 
       context 'when the resource responds to the filter_by_key method' do
-        let(:filter) { [name: 'shawn'] }
+        let(:filter) { [{ name: 'shawn' }] }
         let(:filter_method) { :filter_by_name }
         let(:responds_to_filter_method) { true }
 
@@ -48,7 +48,7 @@ describe Rails::Surrender::FilterBuilder do
       end
 
       context 'when the resource responds to the filter_by_key_id method' do
-        let(:filter) { [user: 1] }
+        let(:filter) { [{ user: 1 }] }
         let(:filter_id_method) { :filter_by_user_id }
         let(:responds_to_filter_id_method) { true }
 

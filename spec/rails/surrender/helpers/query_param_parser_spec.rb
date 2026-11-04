@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe Rails::Surrender::QueryParamParser do
+RSpec.describe Rails::Surrender::QueryParamParser do
   subject { described_class.new(query_params) }
 
   let(:query_params) { {} }
