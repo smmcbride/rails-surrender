@@ -15,7 +15,7 @@ module Rails
           end
 
           def render
-            config.history.push history_class
+            config.history.push history_key(resource.class)
 
             result = {}
             config.locally_included_attributes.each { |attr| result[attr.to_sym] = resource.send(attr) }
@@ -24,7 +24,7 @@ module Rails
               next if config.exclude_locally?(key)
 
               nested_resource_class = nested_class_for(resource, key)
-              next if config.history.include? nested_resource_class
+              next if rendered_above?(nested_resource_class)
 
               nested_config = nested_config_for(nested_resource_class, key)
 
@@ -33,7 +33,7 @@ module Rails
                 result[key] = Collection.new(resource: collection, config: nested_config, ability: ability).render
               else
                 instance = resource.send(key)
-                next if config.history.include? instance.class
+                next if rendered_above?(instance.class)
 
                 if ability.can?(:read, instance)
                   result[key] = Instance.new(resource: instance, config: nested_config, ability: ability).render
@@ -65,9 +65,14 @@ module Rails
             )
           end
 
-          # STI subclasses share their root class's history, so a Novel inside a Book is still circular.
-          def history_class
-            resource.class.base_class
+          def rendered_above?(klass)
+            config.history.include?(history_key(klass))
+          end
+
+          # History holds STI base classes, so a Novel inside a Book is still circular. Missing associations
+          # arrive as NilClass, which has no base class.
+          def history_key(klass)
+            klass.try(:base_class) || klass
           end
         end
       end

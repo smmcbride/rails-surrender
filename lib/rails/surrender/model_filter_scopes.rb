@@ -12,22 +12,24 @@ module Rails
 
       FILTER_PREFIX = 'filter_by_'
 
+      # Serializes first-time scope definition across threads, so a concurrent lookup waits for the scopes rather
+      # than reporting them missing. It is shared by all models because scopes are defined once per model.
+      SCOPES_LOCK = Monitor.new
+
       # Generates the filter scopes on first lookup.
       module ClassMethods
-        # Once the scopes are defined they are ordinary methods, so a missing filter falls through to super
-        # rather than recursing.
         def respond_to_missing?(name, include_private = false)
           return super unless surrender_filter_name?(name) && surrender_filter_scopes_pending?
 
           define_surrender_filter_scopes
-          respond_to?(name, include_private)
+          surrender_filter_scopes_defined? ? respond_to?(name, include_private) : super
         end
 
         def method_missing(name, ...)
           return super unless surrender_filter_name?(name) && surrender_filter_scopes_pending?
 
           define_surrender_filter_scopes
-          public_send(name, ...)
+          surrender_filter_scopes_defined? ? public_send(name, ...) : super
         end
 
         private
@@ -37,13 +39,28 @@ module Rails
         end
 
         def surrender_filter_scopes_pending?
-          !@surrender_filter_scopes_defined && surrender_filterable?
+          !surrender_filter_scopes_defined? && surrender_filterable?
         end
 
+        def surrender_filter_scopes_defined?
+          @surrender_filter_scopes_defined == true
+        end
+
+        # A lookup made while this thread is already defining the scopes returns without them, rather than
+        # recursing. The flag is set only once every scope exists, so a failed attempt is retried next lookup.
         def define_surrender_filter_scopes
-          @surrender_filter_scopes_defined = true
-          define_surrender_column_scopes
-          define_surrender_datetime_scopes
+          SCOPES_LOCK.synchronize do
+            return if surrender_filter_scopes_defined? || @surrender_filter_scopes_defining
+
+            begin
+              @surrender_filter_scopes_defining = true
+              define_surrender_column_scopes
+              define_surrender_datetime_scopes
+              @surrender_filter_scopes_defined = true
+            ensure
+              @surrender_filter_scopes_defining = false
+            end
+          end
         end
 
         # ActiveRecord::Base itself is asked whether it responds to scope names while scopes are being defined.
@@ -53,20 +70,28 @@ module Rails
 
         def define_surrender_column_scopes
           column_names.each do |column|
-            scope :"#{FILTER_PREFIX}#{column}", ->(value) { where(column => value) }
+            define_surrender_filter_scope(column, ->(value) { where(column => value) })
           end
         end
 
         def define_surrender_datetime_scopes
           columns.select { |column| column.type.in? %i[date datetime] }.map(&:name).each do |column|
-            name = "#{FILTER_PREFIX}#{column.delete_suffix('_at')}"
+            name = column.delete_suffix('_at')
             attribute = arel_table[column]
 
-            scope :"#{name}_to", ->(time) { where(attribute.lteq(time)) }
-            scope :"#{name}_from", ->(time) { where(attribute.gteq(time)) }
-            scope :"#{name}_before", ->(time) { where(attribute.lt(time)) }
-            scope :"#{name}_after", ->(time) { where(attribute.gt(time)) }
+            define_surrender_filter_scope("#{name}_to", ->(time) { where(attribute.lteq(time)) })
+            define_surrender_filter_scope("#{name}_from", ->(time) { where(attribute.gteq(time)) })
+            define_surrender_filter_scope("#{name}_before", ->(time) { where(attribute.lt(time)) })
+            define_surrender_filter_scope("#{name}_after", ->(time) { where(attribute.gt(time)) })
           end
+        end
+
+        # Filters the application defines, on this model or a superclass, take precedence over generated ones.
+        def define_surrender_filter_scope(name, body)
+          scope_name = :"#{FILTER_PREFIX}#{name}"
+          return if singleton_class.method_defined?(scope_name) || singleton_class.private_method_defined?(scope_name)
+
+          scope scope_name, body
         end
       end
     end

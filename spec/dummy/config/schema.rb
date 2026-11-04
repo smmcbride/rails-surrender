@@ -10,6 +10,7 @@ ActiveRecord::Schema.define do
 
   create_table :books do |t|
     t.references :author
+    t.references :prequel
     t.string :type
     t.string :title, null: false
     t.string :genre

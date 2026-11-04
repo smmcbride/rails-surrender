@@ -71,6 +71,37 @@ RSpec.describe 'Filtering' do
       expect(Novel.filter_by_genre('fantasy')).to contain_exactly(hobbit, earthsea)
     end
 
+    it 'leave filters defined by the model in place' do
+      Book.filter_by_title('The Hobbit')
+
+      expect(Book.filter_by_genre('FANTASY')).to contain_exactly(hobbit, earthsea)
+    end
+
+    it 'leave filters inherited from a superclass in place' do
+      Novel.filter_by_title('The Hobbit')
+
+      expect(Novel.filter_by_genre('FANTASY')).to contain_exactly(hobbit, earthsea)
+    end
+
+    it 'are defined once for concurrent first lookups' do
+      model = Class.new(ApplicationRecord) { self.table_name = 'books' }
+      entered = Queue.new
+      release = Queue.new
+      allow(model).to receive(:define_surrender_column_scopes).and_wrap_original do |original|
+        entered << true
+        release.pop
+        original.call
+      end
+
+      first = Thread.new { model.respond_to?(:filter_by_title) }
+      entered.pop
+      second = Thread.new { model.respond_to?(:filter_by_title) }
+      sleep 0.05 until second.status == 'sleep' || !second.alive?
+      release << true
+
+      expect([first.value, second.value]).to eq([true, true])
+    end
+
     it 'do not answer for columns that do not exist' do
       expect(Book).not_to respond_to(:filter_by_colour)
     end

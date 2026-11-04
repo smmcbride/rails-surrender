@@ -17,7 +17,7 @@ module Rails
             list
               .map { |e| element_from(e) }
               .reject do |element|
-              element.klass.in?(history) ||
+              element.klass.base_class.in?(history) ||
                 element.name.in?(local_user_excludes) ||
                 (element.name.in?(local_ctrl_excludes) && !element.name.in?(local_user_includes))
             end

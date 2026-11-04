@@ -75,6 +75,14 @@ RSpec.describe 'Rendering' do
       expect(json['chapters'].first).not_to have_key('book')
     end
 
+    it 'does not expand an association to an STI subclass of a resource already rendered' do
+      essays.update!(prequel: earthsea)
+
+      get "/books/#{essays.id}", params: { include: 'prequel' }
+
+      expect(json).not_to have_key('prequel')
+    end
+
     it 'rejects attributes the model does not make available' do
       get "/books/#{essays.id}", params: { include: 'updated_at' }
 

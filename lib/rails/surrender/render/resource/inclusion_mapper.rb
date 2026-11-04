@@ -17,7 +17,7 @@ module Rails
           end
 
           def parse
-            config.history.push resource_class
+            config.history.push resource_class.base_class
             includes = []
 
             config.expanding_elements.each do |element|
@@ -27,7 +27,7 @@ module Rails
                 ctrl_include: config.nested_ctrl_includes[element.name] || [],
                 user_exclude: config.nested_user_excludes[element.name] || [],
                 ctrl_exclude: config.nested_ctrl_excludes[element.name] || [],
-                history: config.history.dup.push(element.klass)
+                history: config.history.dup.push(element.klass.base_class)
               )
 
               nested = if element.continue

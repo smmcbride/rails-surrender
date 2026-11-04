@@ -12,6 +12,7 @@
 - `filter_by_*` scopes are generated on first use instead of when a model is defined, so loading a model no longer
   queries the database, models whose table is created after boot still get them, and abstract classes not named
   `ApplicationRecord` are skipped. Errors while defining them are no longer silently swallowed.
+  `filter_by_*` scopes the app defines, on the model or a superclass, always take precedence over generated ones.
 - Rendering a collection whose model has STI subclasses no longer raises `NameError`.
 - Rendering an STI record no longer loops forever, and STI subclasses are recognised as their base class when
   stopping circular expansion.
