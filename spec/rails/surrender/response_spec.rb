@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe Rails::Surrender::Response do
+RSpec.describe Rails::Surrender::Response do
   subject { described_class.new(data: data) }
 
   let(:data) { {} }

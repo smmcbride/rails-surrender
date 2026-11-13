@@ -55,7 +55,8 @@ module Rails
       private
 
       def ability
-        return current_ability if respond_to?(:current_ability)
+        # Apps commonly override CanCanCan's current_ability as a private method.
+        return current_ability if respond_to?(:current_ability, true)
 
         DefaultAbility.new
       end
@@ -72,8 +73,9 @@ module Rails
         FilterBuilder.new(resource: resource, filter: parsed_query_params.filter).build!
       end
 
+      # A count describes the whole collection, so it is never paginated.
       def paginate?(resource)
-        pagination(resource).paginatable? && @will_paginate
+        pagination(resource).paginatable? && @will_paginate && !parsed_query_params.count?
       end
 
       def paginate(resource)

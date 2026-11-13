@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-describe Rails::Surrender::PaginationBuilder do
+RSpec.describe Rails::Surrender::PaginationBuilder do
   subject { described_class.new(resource: resource, pagination: pagination) }
 
   let(:pagination) { Rails::Surrender::QueryParamParser::Pagination.new(page: 13, per: 123) }

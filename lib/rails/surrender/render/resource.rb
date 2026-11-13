@@ -19,8 +19,8 @@ module Rails
 
         def parse
           data = case resource
-                 when nil? then {}
-                 when Hash || Array then resource
+                 when nil then {}
+                 when Hash, Array then resource
                  when ActiveRecord::Relation then collection_data
                  else instance_data
                  end
