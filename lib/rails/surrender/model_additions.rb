@@ -21,24 +21,17 @@ module Rails
             (inherited_surrender(:@surrender_available_fields) + Array(available).map(&:to_sym)).uniq
         end
 
-        def surrender_attributes
-          attributes_among(surrender_fields)
-        end
-
-        def surrender_expands
-          associations_among(surrender_fields)
-        end
-
-        def surrender_callable_attributes
-          attributes_among(surrender_callable_fields)
-        end
-
-        def surrender_callable_expands
-          associations_among(surrender_callable_fields)
-        end
-
         def surrender_fields
           @surrender_fields || DEFAULT_FIELDS
+        end
+
+        def surrender_available_fields
+          @surrender_available_fields || []
+        end
+
+        # Everything a request may ask of the model: its fields, filters and sorts.
+        def surrender_menu
+          Menu.new(self)
         end
 
         # Whether a request may include the field: it renders by default or is available.
@@ -60,10 +53,6 @@ module Rails
 
         private
 
-        def surrender_available_fields
-          @surrender_available_fields || []
-        end
-
         def id_list_association(name)
           return unless name.end_with?('_ids')
 
@@ -78,14 +67,6 @@ module Rails
 
         def inherited_surrender(variable)
           superclass.instance_variable_defined?(variable) ? superclass.instance_variable_get(variable) : []
-        end
-
-        def attributes_among(fields)
-          fields.reject { |field| reflect_on_association(field) }
-        end
-
-        def associations_among(fields)
-          fields.select { |field| reflect_on_association(field) }
         end
       end
     end

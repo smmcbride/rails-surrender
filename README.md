@@ -26,6 +26,9 @@ Most attributes on the requested resource can be targeted for sorting.  Sorting 
 | `sort=-created_at`  | Sort the results in reverse by the `created_at` attribute |
 | `sort=author.name`  | Sort the results by the `name` of each result's `author`  |
 
+Sorting by a column of an association works for associations that hold one record, such as `belongs_to` and `has_one`.
+An association that holds many would repeat each result once per associated record, so it is rejected.
+
 A model can define its own sorts as scopes named `sort_by_<name>`, which take the direction, `'ASC'` or `'DESC'`. A
 sort the model defines wins over a column of the same name, so `sort_by_title` can sort titles without regard to case:
 
@@ -175,6 +178,18 @@ resource you wish to render. An example controller action is provided below:
   end
 ```
 
+
+### Describing what a request may ask
+
+`surrender_menu` lists everything a request may ask of a model, read from the same rules that check requests, for
+documentation or an API explorer like the demo's:
+
+```ruby
+menu = Book.surrender_menu
+menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own menu
+menu.filters  # each with its name and the column it compares, or nil for a filter the model defines
+menu.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
+```
 
 ### Additional Notes
 

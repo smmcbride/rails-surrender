@@ -29,6 +29,10 @@ _Avoid_: Expansion, join
 The fields one request renders, nested by **expand**, worked out from the model, the request and the controller before any record loads.
 _Avoid_: Render plan, configuration, inclusion map
 
+**Menu**:
+Everything a request may ask of one model: its **default** and **available fields**, nested by **expand**, and its **filters** and **sorts**.
+_Avoid_: Options, offer, catalog
+
 ### Records
 
 **Selection**:
