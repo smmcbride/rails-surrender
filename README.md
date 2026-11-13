@@ -24,6 +24,14 @@ Most attributes on the requested resource can be targeted for sorting.  Sorting 
 |---------------------|-----------------------------------------------------------|
 | `sort=name`         | Sort the results by the `name` attribute                  |
 | `sort=-created_at`  | Sort the results in reverse by the `created_at` attribute |
+| `sort=author.name`  | Sort the results by the `name` of each result's `author`  |
+
+A model can define its own sorts as scopes named `sort_by_<name>`, which take the direction, `'ASC'` or `'DESC'`. A
+sort the model defines wins over a column of the same name, so `sort_by_title` can sort titles without regard to case:
+
+```ruby
+scope :sort_by_title, ->(direction) { order(Arel.sql("LOWER(title) #{direction}")) }
+```
 
 
 ### Pagination
@@ -72,7 +80,7 @@ without an offset is in the app's time zone. Any other value is rejected with a 
 
 ### Counting
 Instead of rendering a full list of resources, `rails-surrender` can return only the _count_ of the number of resources
-that _would_ be returned.  This can be useful when combined with filters for basic reporting. Access is provided with
+that _would_ be returned. A count ignores pagination: it counts every resource the filters select, not just one page.  This can be useful when combined with filters for basic reporting. Access is provided with
 the `count` query parameter.
 
 | example query param                                             | description                                          |
@@ -81,19 +89,6 @@ the `count` query parameter.
 | `filter=state:TX&count`                                         | count the number of resources in the `state` of 'TX' |
 | `filter=state:TX&count`                                         | count the number of resources in the `state` of 'TX' |
 | `filter=created_before:'2022-01-01'&count`                      | count the number of resources created before 2022    |
-
-
-### Id Lists
-Similar to counting, instead of rendering a full list of resources, `rails-surrender` can return only the _ids of the 
-resources that _would_ be returned.  This can be useful when combined with filters for basic reporting. Access is 
-provided with the `ids` query parameter.
-
-| example query param                                           | description                                           |
-|---------------------------------------------------------------|-------------------------------------------------------|
-| `ids`                                                         | ids of the number of resources                        |
-| `filter=state:TX&ids`                                         | ids of the number of resources in the `state` of 'TX' |
-| `filter=state:TX&ids`                                         | ids of the number of resources in the `state` of 'TX' |
-| `filter=created_before:'2022-01-01'&ids`                      | ids of the resources created before 2022              |
 
 
 ### Including
@@ -124,6 +119,9 @@ exclude can be used to prevent rendering of those attributes. Examples below:
 | `exclude=created_at, updated_at` | exclude the `created_at` and `updated at` attributes of the resource(s) that are rendered by default |
 | `exclude=work_orders`            | include the `work_orders` association of the resource(s) that is rendered by default                 |
 | `exclude=activities:[creator]`   | keep the default `activities` association, but leave out each activity's `creator`                   |
+
+To list only the ids of the resources, exclude every other field they render by default, such as
+`exclude=title,genre,author`.
 
 
 ## Example Project

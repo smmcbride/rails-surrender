@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require_relative '../params/list_param'
 require_relative 'node'
 
 module Rails
@@ -7,9 +8,11 @@ module Rails
     # The fields one request renders, nested by expand, worked out from the model and the asks of the request and the
     # controller before any record loads. Preloading and rendering both read it, so they always agree.
     class FieldTree
-      # `include:` and `exclude:` are the request's asks, as QueryParamParser returns them.
-      def initialize(model, include: [], exclude: [], controller_include: [], controller_exclude: [])
-        asks = Fields::Asks.new(request_include: include, request_exclude: exclude,
+      # `include:` and `exclude:` are the request's asks, as the query string gives them: `'books:[pages], author'`.
+      # A controller's asks are lists: `[:pages, { author: [:name] }]`.
+      def initialize(model, include: '', exclude: '', controller_include: [], controller_exclude: [])
+        asks = Fields::Asks.new(request_include: Params::ListParam.parse(include, param: :include),
+                                request_exclude: Params::ListParam.parse(exclude, param: :exclude),
                                 controller_include: controller_include, controller_exclude: controller_exclude)
         @root = Fields::Node.new(model, asks, [model.base_class])
       end

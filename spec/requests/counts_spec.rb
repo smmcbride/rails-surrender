@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe 'Counts and ids' do
+RSpec.describe 'Counts' do
   it 'renders a count instead of the resources' do
     get '/books', params: { count: '' }
 
@@ -17,17 +17,12 @@ RSpec.describe 'Counts and ids' do
     get '/books', params: { count: '', per: 2 }
 
     expect(json).to eq('count' => 3)
+    expect(response.headers).not_to have_key('X-Pagination')
   end
 
-  it 'renders ids instead of the resources' do
+  it 'ignores the ids param it used to answer' do
     get '/books', params: { ids: '' }
 
-    expect(json['ids']).to contain_exactly(hobbit.id, earthsea.id, essays.id)
-  end
-
-  it 'renders the id of a single resource' do
-    get "/books/#{essays.id}", params: { ids: '' }
-
-    expect(json).to eq('ids' => [essays.id])
+    expect(json.first).to include('id', 'title')
   end
 end

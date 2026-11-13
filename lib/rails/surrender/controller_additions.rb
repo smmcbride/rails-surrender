@@ -1,10 +1,5 @@
 # frozen_string_literal: true
 
-require_relative 'helpers/query_param_parser'
-require_relative 'helpers/filter_builder'
-require_relative 'helpers/pagination_builder'
-require_relative 'helpers/sort_builder'
-
 module Rails
   module Surrender
     # Additions to the Rails ActionController to allow surrender's rendering.
@@ -15,26 +10,16 @@ module Rails
       end
 
       def surrender(resource, status: 200, include: [], exclude: [])
-        resource = filter resource if parsed_query_params.filter?
+        selection = Selection.new(query_params, paginate: @will_paginate)
+        selected = selection.apply(resource)
+        response.headers.merge!(selected.headers)
 
-        if parsed_query_params.sort?
-          resource = sort resource
-          response.headers['X-Sort'] = parsed_query_params.sort.request
-        end
-
-        if paginate?(resource)
-          resource = paginate resource
-          response.headers['X-Pagination'] = pagination_headers(resource)
-        end
-
-        surrender_response = if parsed_query_params.count?
-                               Render::Count.new(resource).parse
-                             elsif parsed_query_params.ids?
-                               Render::Ids.new(resource).parse
+        surrender_response = if selection.count?
+                               Response.new(data: { count: selected.count })
                              else
-                               asks = { include: parsed_query_params.include, exclude: parsed_query_params.exclude,
+                               asks = { include: query_params[:include], exclude: query_params[:exclude],
                                         controller_include: include, controller_exclude: exclude }
-                               Render::Resource.new(resource: resource, ability: ability, asks: asks).parse
+                               Render::Resource.new(resource: selected.records, ability: ability, asks: asks).parse
                              end
 
         # Allows the calling method to decorate the response data before returning the result
@@ -56,42 +41,8 @@ module Rails
         @will_paginate = false
       end
 
-      def filter(resource)
-        FilterBuilder.new(resource: resource, filter: parsed_query_params.filter).build!
-      end
-
-      # A count describes the whole collection, so it is never paginated.
-      def paginate?(resource)
-        pagination(resource).paginatable? && @will_paginate && !parsed_query_params.count?
-      end
-
-      def paginate(resource)
-        pagination(resource).build!
-      end
-
-      def pagination(resource)
-        PaginationBuilder.new(resource: resource, pagination: parsed_query_params.pagination)
-      end
-
-      def pagination_headers(resource)
-        {
-          total: resource.total_count,
-          page_total: resource.count,
-          page: resource.current_page,
-          previous_page: resource.prev_page,
-          next_page: resource.next_page,
-          last_page: resource.total_pages,
-          per_page: parsed_query_params.pagination.per,
-          offset: resource.offset_value
-        }.to_json
-      end
-
-      def sort(resource)
-        SortBuilder.new(resource: resource, sort: parsed_query_params.sort).build!
-      end
-
-      def parsed_query_params
-        @parsed_query_params ||= QueryParamParser.new(request.query_parameters.symbolize_keys)
+      def query_params
+        request.query_parameters.symbolize_keys
       end
     end
   end

@@ -25,6 +25,18 @@ RSpec.describe 'Sorting' do
     expect(titles).to eq(['The Hobbit', 'Dancing at the Edge', 'A Wizard of Earthsea'])
   end
 
+  it 'prefers a sort_by_ scope the model defines over a column of the same name' do
+    get '/books', params: { sort: 'genre' }
+
+    expect(titles).to eq(['Dancing at the Edge', 'A Wizard of Earthsea', 'The Hobbit'])
+  end
+
+  it 'does not sort or echo the sort for a single resource' do
+    get "/books/#{hobbit.id}", params: { sort: 'title' }
+
+    expect(response.headers).not_to have_key('X-Sort')
+  end
+
   it 'sorts by an attribute of an association' do
     get '/books', params: { sort: '-author.name' }
 
