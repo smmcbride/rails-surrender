@@ -123,8 +123,8 @@ exclude can be used to prevent rendering of those attributes. Examples below:
 
 ## Example Project
 A full working example project is provided in the [rails-surrender-demo](https://github.com/smmcbride/rails-surrender-demo)
-repository. It provides several models and endpoints demonstrating a working configuration of `rails-surrender`.  The 
-project provides seed data and a Postman collection to quickly experiment with the features of `rails-surrender`.
+repository. It provides several models and endpoints demonstrating a working configuration of `rails-surrender`. The
+project provides seed data and a `bin/http` command for trying each query parameter from the terminal.
 
 
 ## Installation
