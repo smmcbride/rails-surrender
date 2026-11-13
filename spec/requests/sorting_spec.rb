@@ -31,6 +31,13 @@ RSpec.describe 'Sorting' do
     expect(titles.first).to eq('The Hobbit')
   end
 
+  it 'ignores a blank sort' do
+    get '/books', params: { sort: '' }
+
+    expect(response).to have_http_status(:ok)
+    expect(response.headers).not_to have_key('X-Sort')
+  end
+
   it 'rejects sorts on unknown attributes' do
     get '/books', params: { sort: 'colour' }
 

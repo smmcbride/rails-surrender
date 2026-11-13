@@ -33,8 +33,9 @@ module Rails
         @exclude ||= parse_yml(query_params[EXCLUDE_PARAM], :exclude)
       end
 
+      # A blank sort, as API explorers send for an empty field, means no sort rather than a sort on nothing.
       def sort?
-        query_params.key? SORT_PARAM
+        query_params[SORT_PARAM].present?
       end
 
       def sort

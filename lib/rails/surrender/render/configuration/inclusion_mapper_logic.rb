@@ -14,13 +14,12 @@ module Rails
                     user_included_joins_required +
                     ctrl_included_joins_required)
                    .flatten.uniq
+            # Exclusions are checked with the renderer's rule against what each item renders (chapter_ids, not the
+            # chapters it reads), so exactly what is rendered gets preloaded.
             list
-              .map { |e| element_from(e) }
-              .reject do |element|
-              element.klass.base_class.in?(history) ||
-                element.name.in?(local_user_excludes) ||
-                (element.name.in?(local_ctrl_excludes) && !element.name.in?(local_user_includes))
-            end
+              .reject { |item| exclude_locally?(item.to_sym) }
+              .map { |item| element_from(item) }
+              .reject { |element| element.klass.base_class.in?(history) }
           end
 
           private
@@ -44,11 +43,11 @@ module Rails
                           .select { |expand| attribute_type(expand) == :expand }
           end
 
+          # Keeps the attribute name (chapter_ids), so it can be excluded and preloads only its association.
           def attributes_that_expand(klass)
             klass.surrender_attributes
                  .select { |attr| attr.end_with?('_ids') }
-                 .map { |attr| attr.to_s.delete_suffix('_ids').pluralize }
-                 .select { |include| attribute_type(include).in? %i[expand associate] }
+                 .select { |attr| attribute_type(attr) == :associate }
           end
 
           def user_included_joins_required

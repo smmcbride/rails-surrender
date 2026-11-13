@@ -56,7 +56,7 @@ module Rails
         end
 
         def local_ctrl_excludes
-          top_level_keys_from(ctrl_exclude)
+          whole_exclusions_from(ctrl_exclude)
         end
 
         def local_ctrl_includes
@@ -64,7 +64,7 @@ module Rails
         end
 
         def local_user_excludes
-          top_level_keys_from(user_exclude)
+          whole_exclusions_from(user_exclude)
         end
 
         def local_user_includes
@@ -82,6 +82,11 @@ module Rails
 
         def top_level_keys_from(list)
           list.map { |x| x.is_a?(Hash) ? x.keys : x }.flatten.map(&:to_sym).uniq
+        end
+
+        # `author:[name]` excludes the author's name, not the author, so only bare names exclude at this level.
+        def whole_exclusions_from(list)
+          list.grep_v(Hash).map(&:to_sym).uniq
         end
 
         def next_level_asks_from(list)

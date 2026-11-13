@@ -119,6 +119,7 @@ exclude can be used to prevent rendering of those attributes. Examples below:
 |----------------------------------|------------------------------------------------------------------------------------------------------|
 | `exclude=created_at, updated_at` | exclude the `created_at` and `updated at` attributes of the resource(s) that are rendered by default |
 | `exclude=work_orders`            | include the `work_orders` association of the resource(s) that is rendered by default                 |
+| `exclude=activities:[creator]`   | keep the default `activities` association, but leave out each activity's `creator`                   |
 
 
 ## Example Project
