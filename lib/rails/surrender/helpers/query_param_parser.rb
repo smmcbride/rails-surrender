@@ -18,6 +18,10 @@ module Rails
       PER_PAGE_DEFAULT = 50
       PAGE_DEFAULT = 1
 
+      # YAML needs a space after each comma and colon that separates entries, but not inside quoted values, where it
+      # would change the value: '13:30' must stay '13:30'.
+      SEPARATORS_OUTSIDE_QUOTES = /'[^']*'|"[^"]*"|[,:]/
+
       Sort = Struct.new(:request, :direction, :association, :attribute, :scope_method, keyword_init: true)
       Pagination = Struct.new(:page, :per, keyword_init: true)
 
@@ -90,7 +94,8 @@ module Rails
 
       def parse_yml(query_string, action)
         query_string ||= '' # empty string in case nil is passed
-        Psych.safe_load("[#{query_string.gsub(/(,|:)/, '\1 ')}]")
+        spaced = query_string.gsub(SEPARATORS_OUTSIDE_QUOTES) { |match| match.length == 1 ? "#{match} " : match }
+        Psych.safe_load("[#{spaced}]")
       rescue StandardError
         raise Error, I18n.t('surrender.error.query_string.incorrect_format', param: action)
       end

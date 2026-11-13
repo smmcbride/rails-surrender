@@ -2,8 +2,9 @@
 
 module Rails
   module Surrender
-    # Adds a filter_by_<column> scope for every column, and filter_by_<name>_to/from/before/after scopes for
-    # date and time columns, where <name> drops any _at suffix.
+    # Adds a filter_by_<column> scope for every column, and filter_by_<name>_before/after scopes for date and
+    # time columns, where <name> drops any _at suffix. The before/after scopes take a Time or Date, or an ISO 8601
+    # string, and raise Rails::Surrender::Error for anything else.
     #
     # The scopes are defined the first time any filter_by_ method is looked up, rather than when the class is
     # defined, so that loading a model never touches the database.
@@ -75,15 +76,30 @@ module Rails
         end
 
         def define_surrender_datetime_scopes
+          # Scope bodies run against a relation, which can't call the model's private methods, so they close over it.
+          to_time = method(:surrender_filter_time)
+
           columns.select { |column| column.type.in? %i[date datetime] }.map(&:name).each do |column|
             name = column.delete_suffix('_at')
             attribute = arel_table[column]
 
-            define_surrender_filter_scope("#{name}_to", ->(time) { where(attribute.lteq(time)) })
-            define_surrender_filter_scope("#{name}_from", ->(time) { where(attribute.gteq(time)) })
-            define_surrender_filter_scope("#{name}_before", ->(time) { where(attribute.lt(time)) })
-            define_surrender_filter_scope("#{name}_after", ->(time) { where(attribute.gt(time)) })
+            define_surrender_filter_scope("#{name}_before", lambda { |time|
+              where(attribute.lt(to_time.call("#{name}_before", time)))
+            })
+            define_surrender_filter_scope("#{name}_after", lambda { |time|
+              where(attribute.gt(to_time.call("#{name}_after", time)))
+            })
           end
+        end
+
+        # Strict, so a value that is not a time is rejected rather than compared as NULL, which matches nothing.
+        # A time without an offset is in the app's time zone.
+        def surrender_filter_time(filter, value)
+          return value if value.is_a?(Date) || value.acts_like?(:time)
+
+          Time.zone.iso8601(value.to_s)
+        rescue ArgumentError
+          raise Error, I18n.t('surrender.error.query_string.filter.invalid_time', param: filter, value: value)
         end
 
         # Filters the application defines, on this model or a superclass, take precedence over generated ones.
