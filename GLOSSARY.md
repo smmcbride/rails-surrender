@@ -30,8 +30,11 @@ The fields one request renders, nested by **expand**, worked out from the model,
 _Avoid_: Render plan, configuration, inclusion map
 
 **Menu**:
-Everything a request may ask of one model: its **default** and **available fields**, nested by **expand**, and its **filters** and **sorts**.
-_Avoid_: Options, offer, catalog
+Everything a request may ask of one model: its **field menu** and its **selection menu**.
+_Avoid_: Options, offer, catalog, docs, schema, metadata, capabilities
+
+**Field menu**:
+The **default** and **available fields** of one model, nested by **expand**. It applies wherever the model renders, at the top of a response or inside an expand.
 
 ### Records
 
@@ -57,6 +60,9 @@ _Avoid_: Per page, limit
 **Page size limit**:
 The most records one **page** may hold, whatever a request asks for. An app sets it, or removes it.
 _Avoid_: Max per page
+
+**Selection menu**:
+The **filters**, **sorts** and **page size** a request may use to pick a model's records. It applies only at the top of a response, to a relation: nothing filters or sorts the records inside an expand.
 
 **Count response**:
 The number of records a request's filters select, ignoring the page, rendered instead of the records.

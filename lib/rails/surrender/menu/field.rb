@@ -2,9 +2,9 @@
 
 module Rails
   module Surrender
-    class Menu
+    class FieldMenu
       # A field a request may ask a model for: its kind (:attribute, :id_list or :expand), whether it renders by
-      # default, and, for an expand, the menu of the model it leads to.
+      # default, and, for an expand, the field menu of the model it leads to.
       Field = Data.define(:name, :kind, :default, :menu) do
         def default?
           default

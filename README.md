@@ -205,11 +205,15 @@ documentation or an API explorer like the demo's:
 
 ```ruby
 menu = Book.surrender_menu
-menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own menu
-menu.filters  # each with its name and the column it compares, or nil for a filter the model defines
-menu.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
-menu.page_size.default, menu.page_size.max   # 50 and 100 unless configured
+menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own field menu
+menu.selection.filters  # each with its name and the column it compares, or nil for a filter the model defines
+menu.selection.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
+menu.selection.page_size.default, menu.selection.page_size.max   # 50 and 100 unless configured
 ```
+
+The fields make up the model's field menu, which applies wherever the model renders, including inside an expand. The
+filters, sorts and page size make up its selection menu, which applies only to the records at the top of a response.
+`menu.filters`, `menu.sorts` and `menu.page_size` answer from the selection menu too.
 
 ### Additional Notes
 
