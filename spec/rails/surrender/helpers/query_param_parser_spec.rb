@@ -37,6 +37,16 @@ RSpec.describe Rails::Surrender::QueryParamParser do
     end
   end
 
+  describe '#filter' do
+    context 'when a quoted value contains colons and commas' do
+      let(:query_params) { { filter: "published_after:'1968-11-01T13:30:00Z',title:'Yes, Minister'" } }
+
+      it 'keeps the value as given' do
+        expect(subject.filter).to eq([{ 'published_after' => '1968-11-01T13:30:00Z' }, { 'title' => 'Yes, Minister' }])
+      end
+    end
+  end
+
   describe '#sort?' do
     context 'when no sort param is passed' do
       it 'will not sort' do

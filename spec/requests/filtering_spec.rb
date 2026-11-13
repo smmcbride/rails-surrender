@@ -32,22 +32,32 @@ RSpec.describe 'Filtering' do
       expect(titles).to eq(['The Hobbit'])
     end
 
-    it 'filters up to and including a time' do
-      get '/books', params: { filter: "published_to:'1968-11-01'" }
+    it 'filters to the second, not just the day' do
+      get '/books', params: { filter: "published_before:'1968-11-01T00:00:01Z'" }
 
       expect(titles).to contain_exactly('The Hobbit', 'A Wizard of Earthsea')
+    end
+
+    it 'applies the offset of an ISO 8601 time' do
+      get '/books', params: { filter: "published_before:'1968-10-31T19:00:01-05:00'" }
+
+      expect(titles).to contain_exactly('The Hobbit', 'A Wizard of Earthsea')
+    end
+
+    ["'garbage'", "'1968-11-01 00:00:01'", "'Nov 1 1968'", "'1968-13-45'"].each do |value|
+      it "rejects #{value}, which is not an ISO 8601 date or time" do
+        get '/books', params: { filter: "published_before:#{value}" }
+
+        expect(response).to have_http_status(:bad_request)
+        expect(json['error']).to eq("published_before needs an ISO 8601 date or time, such as '2026-01-01' or " \
+                                    "'2026-01-01T13:30:00Z', not '#{value.delete("'")}'.")
+      end
     end
 
     it 'filters after a time' do
       get '/books', params: { filter: "published_after:'1968-11-01'" }
 
       expect(titles).to eq(['Dancing at the Edge'])
-    end
-
-    it 'filters from and including a time' do
-      get '/books', params: { filter: "published_from:'1968-11-01'" }
-
-      expect(titles).to contain_exactly('A Wizard of Earthsea', 'Dancing at the Edge')
     end
   end
 

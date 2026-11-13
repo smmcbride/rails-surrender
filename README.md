@@ -54,19 +54,20 @@ details. The hash is structured like:
 ### Filtering
 `rails-surrender` adds a number of scopes to your models for filtering, and provides access to the filters with the 
 `filter` query parameter. Most columns are provided with an equality filter and can be filtered on matching values. 
-Date and Time columns are provided with multiple filters to select dates/times before or after the given time.
-Examples are provided below:
+Date and Time columns are also provided with `_before` and `_after` filters, named after the column without its `_at`
+suffix, which select records strictly before or after the given date or time. Examples are provided below:
 
-Note: Time-based filters must be surrounded by either single or double-quotes
+Note: Time-based filters take an [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) date or time, such as
+`'2022-01-01'`, `'2022-01-01T13:30:00Z'` or `'2022-01-01T13:30:00-05:00'`, surrounded by single or double quotes. A time
+without an offset is in the app's time zone. Any other value is rejected with a `Rails::Surrender::Error`.
 
-| example query param                  | description                                                                  |
-|--------------------------------------|------------------------------------------------------------------------------|
-| `filter=active:false`                | filter for resources with the `active` attribute set to false                |
-| `filter=state:TX`                    | filter for resources with the `state` attribute of `TX`                      |
-| `filter=created_before:'2022-01-01'` | filter for resources with a `created_at` value _before_ Jan 01, 2022         |
-| `filter=created_after:'2022-01-01'`  | filter for resources with a `created_at` value _after_ Jan 01, 2022          |
-| `filter=created_to:'2022-01-01'`     | filter for resources with a `created_at` value _on_ of _before_ Jan 01, 2022 |
-| `filter=created_from:'2022-01-01'`   | filter for resources with a `created_at` value _on_ or _after Jan 01, 2022   |
+| example query param                           | description                                                                       |
+|-----------------------------------------------|-----------------------------------------------------------------------------------|
+| `filter=active:false`                         | filter for resources with the `active` attribute set to false                     |
+| `filter=state:TX`                             | filter for resources with the `state` attribute of `TX`                           |
+| `filter=created_before:'2022-01-01'`          | filter for resources with a `created_at` value _before_ Jan 01, 2022              |
+| `filter=created_after:'2022-01-01'`           | filter for resources with a `created_at` value _after_ Jan 01, 2022               |
+| `filter=created_after:'2022-01-01T13:30:00Z'` | filter for resources with a `created_at` value _after_ 1:30pm UTC on Jan 01, 2022 |
 
 
 ### Counting
@@ -79,7 +80,7 @@ the `count` query parameter.
 | `count`                                                         | count the number of resources                        |
 | `filter=state:TX&count`                                         | count the number of resources in the `state` of 'TX' |
 | `filter=state:TX&count`                                         | count the number of resources in the `state` of 'TX' |
-| `filter=created_from:'2021-01-01,created_to:'2021-12-31'&count` | count the number of resources created in 2021        |
+| `filter=created_before:'2022-01-01'&count`                      | count the number of resources created before 2022    |
 
 
 ### Id Lists
@@ -92,7 +93,7 @@ provided with the `ids` query parameter.
 | `ids`                                                         | ids of the number of resources                        |
 | `filter=state:TX&ids`                                         | ids of the number of resources in the `state` of 'TX' |
 | `filter=state:TX&ids`                                         | ids of the number of resources in the `state` of 'TX' |
-| `filter=created_from:'2021-01-01,created_to:'2021-12-31'&ids` | ids of the number of resources created in 2021        |
+| `filter=created_before:'2022-01-01'&ids`                      | ids of the resources created before 2022              |
 
 
 ### Including
@@ -125,7 +126,8 @@ exclude can be used to prevent rendering of those attributes. Examples below:
 ## Example Project
 A full working example project is provided in the [rails-surrender-demo](https://github.com/smmcbride/rails-surrender-demo)
 repository. It provides several models and endpoints demonstrating a working configuration of `rails-surrender`. The
-project provides seed data and a `bin/http` command for trying each query parameter from the terminal.
+project provides seed data, a browser explorer where each query parameter is a checkbox and the response is shown as
+you send it, and a `bin/http` command for trying each query parameter from the terminal.
 
 
 ## Installation
