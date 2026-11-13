@@ -3,6 +3,5 @@
 class Chapter < ApplicationRecord
   belongs_to :book
 
-  surrenders attributes: %i[id title position],
-             expands: [:book]
+  surrenders :id, :title, :position, :book
 end

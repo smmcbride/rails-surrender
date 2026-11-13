@@ -3,6 +3,11 @@
 ## 0.2.0
 
 ### Breaking
+- `surrenders` takes the fields to render by default as arguments, and the fields a request may add as `available:`.
+  Surrender tells associations from attributes itself, so `attributes:`, `expands:`, `available_attributes:` and
+  `available_expands:` are removed and raise `ArgumentError`. For example,
+  `surrenders attributes: %i[id title], expands: [:author], available_attributes: [:pages]` becomes
+  `surrenders :id, :title, :author, available: [:pages]`.
 - Requires Rails 8.0 or 8.1 and Ruby 3.3 or newer. Rails 7 and Ruby 3.0–3.2 are no longer supported.
 - `kaminari` and `oj` are no longer pinned to exact versions (`~> 1.2` and `~> 3.13`).
 - The `<name>_to` and `<name>_from` filters on date and time columns are removed. They duplicated `_before` and

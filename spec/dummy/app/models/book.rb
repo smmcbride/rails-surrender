@@ -10,7 +10,6 @@ class Book < ApplicationRecord
   scope :filter_by_long, ->(long) { long ? where(pages: 300..) : where(pages: ...300) }
   scope :sort_by_title_length, ->(direction) { order(Arel.sql("LENGTH(title) #{direction}")) }
 
-  surrenders attributes: %i[id title genre],
-             available_attributes: %i[pages published_at created_at chapter_ids],
-             available_expands: %i[author chapters prequel]
+  surrenders :id, :title, :genre,
+             available: %i[pages published_at created_at chapter_ids author chapters prequel]
 end

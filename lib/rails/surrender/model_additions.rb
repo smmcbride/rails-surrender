@@ -2,56 +2,66 @@
 
 module Rails
   module Surrender
-    # Aad methods to the model class to describe how the model renders.
+    # Adds methods to the model class to describe how the model renders.
     module ModelAdditions
       def self.included(base)
-        attr_accessor :surrender_attributes
-        attr_accessor :surrender_expands
-        attr_accessor :surrender_available_attributes
-        attr_accessor :surrender_available_expands
-
         base.extend(ClassMethods)
       end
 
+      # A model lists the fields it renders by default, and those a request may add with `include`. Fields that name
+      # an association expand into the associated resource; every other field is rendered as an attribute.
       module ClassMethods
-        def surrenders(*args)
-          directives = args.extract_options!
+        DEFAULT_FIELDS = %i[id created_at].freeze
 
-          # Run through the various lists of attributes and assign them to the rendering context
-          # If the superclass has attributes then consume those as well.
-          %w[attributes expands available_attributes available_expands].each do |directive|
-            surrender_directive = "surrender_#{directive}"
-            list = []
-            if superclass.instance_variable_defined?("@#{surrender_directive}")
-              list << superclass.instance_variable_get("@#{surrender_directive}")
-            end
-            list << directives[directive.to_sym] if directives.key?(directive.to_sym)
-            instance_variable_set("@#{surrender_directive}", list.flatten.uniq)
-          end
+        # Fields are sorted into attributes and associations when read, not here, because models often call
+        # `surrenders` before declaring the associations it names.
+        def surrenders(*fields, available: [])
+          @surrender_fields = (inherited_surrender(:@surrender_fields) + fields.map(&:to_sym)).uniq
+          @surrender_available_fields =
+            (inherited_surrender(:@surrender_available_fields) + Array(available).map(&:to_sym)).uniq
         end
 
         def surrender_attributes
-          @surrender_attributes ||= %i[id created_at]
-        end
-
-        def surrender_available_attributes
-          @surrender_available_attributes ||= []
+          attributes_among(surrender_fields)
         end
 
         def surrender_expands
-          @surrender_expands ||= []
-        end
-
-        def surrender_available_expands
-          @surrender_available_expands ||= []
+          associations_among(surrender_fields)
         end
 
         def surrender_callable_attributes
-          @surrender_callable_attributes ||= (surrender_attributes + surrender_available_attributes).flatten
+          attributes_among(surrender_callable_fields)
         end
 
         def surrender_callable_expands
-          @surrender_callable_expands ||= (surrender_expands + surrender_available_expands).flatten
+          associations_among(surrender_callable_fields)
+        end
+
+        private
+
+        def surrender_fields
+          @surrender_fields || DEFAULT_FIELDS
+        end
+
+        def surrender_available_fields
+          @surrender_available_fields || []
+        end
+
+        # A subclass may make a default of a field its superclass only made available.
+        def surrender_callable_fields
+          (surrender_fields + surrender_available_fields).uniq
+        end
+
+        def inherited_surrender(variable)
+          superclass.instance_variable_defined?(variable) ? superclass.instance_variable_get(variable) : []
+        end
+
+        def attributes_among(fields)
+          fields.reject { |field| reflect_on_association(field) }
+        end
+
+        def associations_among(fields)
+          fields.select { |field| reflect_on_association(field) }
         end
       end
     end
