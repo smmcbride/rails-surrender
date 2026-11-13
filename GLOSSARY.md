@@ -29,6 +29,26 @@ _Avoid_: Expansion, join
 The fields one request renders, nested by **expand**, worked out from the model, the request and the controller before any record loads.
 _Avoid_: Render plan, configuration, inclusion map
 
+### Records
+
+**Selection**:
+The records one request renders, picked from what the controller surrenders by the request's **filter**, **sort** and **page**.
+_Avoid_: Query, scope, listing
+
+**Filter**:
+A condition a request puts on the records it selects, named for a field or for a filter the model defines.
+
+**Sort**:
+The order a request puts its selected records in, by one attribute, an attribute of an association, or a sort the model defines.
+_Avoid_: Order
+
+**Page**:
+One slice of a selection, set by `page` and `per`. Selections are paged unless the controller skips it.
+_Avoid_: Pagination window
+
+**Count response**:
+The number of records a request's filters select, ignoring the page, rendered instead of the records.
+
 ### Asks
 
 **Include**:

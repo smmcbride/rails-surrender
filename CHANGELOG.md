@@ -28,6 +28,14 @@
   [#6](https://github.com/smmcbride/rails-surrender/issues/6).
 - A name the controller includes that is not an association or `*_ids` id list renders as an attribute, so a name the
   model can't answer raises `NoMethodError` instead of being silently skipped.
+- The `ids` query param is removed, and a request that sends it renders the resources as usual. To list only ids,
+  exclude the other default fields, such as `exclude=title,genre,author`.
+- A `sort_by_<name>` scope the model defines wins over a column of the same name, as `filter_by_` scopes the model
+  defines already win over generated ones. Previously the column sort was used and the scope never ran.
+- `Rails::Surrender::FieldTree.new` takes the request's `include:` and `exclude:` as query strings, such as
+  `include: 'books:[pages]'`, rather than parsed lists.
+- `Rails::Surrender::QueryParamParser` is removed. Its page defaults are `Rails::Surrender::Selection::PAGE_DEFAULT`
+  and `PER_PAGE_DEFAULT`. `Rails::Surrender::ModelFilterScopes` is now `Rails::Surrender::Selection::Filtering`.
 
 ### Fixed
 - Apps that eager load (the production default) no longer fail at boot with `undefined method 'surrenders'`. Surrender
@@ -54,8 +62,16 @@
   preloaded instead of loaded once per record.
 - A request include that is not available, at any depth, is rejected before any query runs.
 - A `belongs_to` with no record renders `null` whatever the ability allows.
+- A single resource no longer gets an `X-Sort` header, as it isn't sorted.
+- Paginated requests run one query fewer: `page_total` in `X-Pagination` follows from the total instead of a second
+  count.
+- A filter term with no value, such as `filter=genre`, is rejected as improperly formatted. It was reported as an
+  unknown filter named after its first letter: `g is not a valid filter parameter.`
 
 ### Changed
+- A selection applies a request's filter, sort and page to a relation, and models resolve filter and sort names with
+  `surrender_filter` and `surrender_sort`. `FilterBuilder`, `SortBuilder`, `PaginationBuilder` and `Render::Ids` and
+  `Render::Count` are removed.
 - Surrender works out the fields a request renders once, as a field tree, and both preloading and rendering read it.
   `Render::Configuration` and the classes under `Render::Resource` are replaced by `Rails::Surrender::FieldTree`.
 - Locale files are loaded through the Railtie.

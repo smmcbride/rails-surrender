@@ -8,8 +8,13 @@ RSpec.describe Rails::Surrender::FieldTree do
       expect(described_class.new(Book).to_h).to eq(id: :attribute, title: :attribute, genre: :attribute)
     end
 
+    it 'rejects a malformed request ask, naming it' do
+      expect { described_class.new(Book, exclude: 'author:[') }
+        .to raise_error(Rails::Surrender::Error, 'The exclude parameter was improperly formatted.')
+    end
+
     it 'adds the fields a request includes, nested by expand' do
-      tree = described_class.new(Author, include: ['book_ids', { 'books' => ['pages'] }])
+      tree = described_class.new(Author, include: 'book_ids, books:[pages]')
 
       expect(tree.to_h).to eq(id: :attribute, name: :attribute, book_ids: :id_list,
                               books: { id: :attribute, title: :attribute, genre: :attribute, pages: :attribute })
@@ -20,26 +25,26 @@ RSpec.describe Rails::Surrender::FieldTree do
     end
 
     it 'removes the fields a request or controller excludes' do
-      tree = described_class.new(Book, exclude: ['genre'], controller_exclude: [:title])
+      tree = described_class.new(Book, exclude: 'genre', controller_exclude: [:title])
 
       expect(tree.to_h).to eq(id: :attribute)
     end
 
     it 'keeps a field the request includes even when it is excluded' do
-      tree = described_class.new(Book, include: ['genre'], controller_exclude: [:genre])
+      tree = described_class.new(Book, include: 'genre', controller_exclude: [:genre])
 
       expect(tree.to_h).to include(genre: :attribute)
     end
 
     it 'applies a nested exclude to the next level only' do
-      tree = described_class.new(Chapter, exclude: [{ 'book' => ['genre'] }])
+      tree = described_class.new(Chapter, exclude: 'book:[genre]')
 
       expect(tree.to_h).to eq(id: :attribute, title: :attribute, position: :attribute,
                               book: { id: :attribute, title: :attribute })
     end
 
     it 'leaves out expands back into a model already above, recognising STI subclasses by their base class' do
-      tree = described_class.new(Author, include: [{ 'books' => %w[author chapters prequel] }])
+      tree = described_class.new(Author, include: 'books:[author, chapters, prequel]')
 
       expect(tree.to_h[:books]).to eq(id: :attribute, title: :attribute, genre: :attribute,
                                       chapters: { id: :attribute, title: :attribute, position: :attribute })
@@ -51,13 +56,13 @@ RSpec.describe Rails::Surrender::FieldTree do
         belongs_to :book
         surrenders :book, :title, :id
       end)
-      tree = described_class.new(model, include: [], controller_include: %i[book_id position])
+      tree = described_class.new(model, controller_include: %i[book_id position])
 
       expect(tree.to_h.keys).to eq(%i[id title book_id position book])
     end
 
     it 'orders fields by default, then controller, then request within each kind' do
-      tree = described_class.new(Author, include: %w[created_at book_ids], controller_include: %i[updated_at])
+      tree = described_class.new(Author, include: 'created_at, book_ids', controller_include: %i[updated_at])
 
       expect(tree.to_h.keys).to eq(%i[id name updated_at created_at book_ids])
     end
@@ -65,18 +70,18 @@ RSpec.describe Rails::Surrender::FieldTree do
 
   describe 'validation' do
     it 'rejects a field the model does not make available' do
-      expect { described_class.new(Author, include: ['updated_at']) }
+      expect { described_class.new(Author, include: 'updated_at') }
         .to raise_error(Rails::Surrender::Error, '[:updated_at] is not a valid include parameter.')
     end
 
     it 'rejects a name that is not a field' do
-      expect { described_class.new(Author, include: ['nonsense']) }
+      expect { described_class.new(Author, include: 'nonsense') }
         .to raise_error(Rails::Surrender::Error, '[:nonsense] is not a valid include parameter.')
     end
 
     it 'rejects an unavailable field below the top level before any query runs' do
       queries = capture_queries do
-        expect { described_class.new(Author, include: [{ 'books' => ['updated_at'] }]) }
+        expect { described_class.new(Author, include: 'books:[updated_at]') }
           .to raise_error(Rails::Surrender::Error, '[:updated_at] is not a valid include parameter.')
       end
 
@@ -121,7 +126,7 @@ RSpec.describe Rails::Surrender::FieldTree do
     it 'leaves out records in a nested collection the ability cannot read' do
       Chapter.create!(book: hobbit, title: 'Secret', position: 3)
 
-      rendered = described_class.new(Book, include: ['chapters'])
+      rendered = described_class.new(Book, include: 'chapters')
                                 .render(hobbit, ability: ChaptersController::Ability.new('Secret'))
 
       expect(rendered[:chapters].pluck(:title)).to contain_exactly('An Unexpected Party', 'Roast Mutton')
@@ -136,7 +141,7 @@ RSpec.describe Rails::Surrender::FieldTree do
     end
 
     it 'loads each association in one query across the classes that render it' do
-      tree = described_class.new(Book, include: ['chapters'])
+      tree = described_class.new(Book, include: 'chapters')
 
       queries = capture_queries { tree.render(Book.all, ability: ability) }
 
@@ -151,7 +156,7 @@ RSpec.describe Rails::Surrender::FieldTree do
     end
 
     it 'runs the same number of queries however many records it renders' do
-      tree = described_class.new(Author, include: [{ 'books' => %w[chapters chapter_ids] }])
+      tree = described_class.new(Author, include: 'books:[chapters, chapter_ids]')
       baseline = count_queries { tree.render(Author.all, ability: ability) }
 
       2.times { |n| Novel.create!(author: Author.create!(name: "A#{n}"), title: "B#{n}").chapters.create!(title: 'C') }

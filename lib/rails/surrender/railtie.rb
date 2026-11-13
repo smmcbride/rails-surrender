@@ -16,7 +16,8 @@ module Rails
       initializer 'rails_surrender.active_record' do
         ActiveSupport.on_load(:active_record) do
           include Rails::Surrender::ModelAdditions
-          include Rails::Surrender::ModelFilterScopes
+          include Rails::Surrender::Selection::Filtering
+          include Rails::Surrender::Selection::Sorting
         end
       end
     end

@@ -8,6 +8,8 @@ class Book < ApplicationRecord
   # Overrides the generated equality filter, so specs can check generation leaves it alone.
   scope :filter_by_genre, ->(genre) { where(genre: genre.downcase) }
   scope :filter_by_long, ->(long) { long ? where(pages: 300..) : where(pages: ...300) }
+  # Shares its name with the genre column, so specs can check a sort the model defines wins over the column.
+  scope :sort_by_genre, ->(direction) { order(genre: direction, title: direction) }
   scope :sort_by_title_length, ->(direction) { order(Arel.sql("LENGTH(title) #{direction}")) }
 
   surrenders :id, :title, :genre,
