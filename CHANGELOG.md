@@ -1,6 +1,7 @@
 # Changelog
 
-## 0.2.0
+## 8.0.0
+The version now names the Rails version it supports: 8.0.0 supports Rails 8.0 and 8.1. It follows 7.0.0.
 
 ### Breaking
 - `surrenders` takes the fields to render by default as arguments, and the fields a request may add as `available:`.
@@ -93,6 +94,10 @@
 - Locale files are loaded through the Railtie.
 - Removed the unused ActiveRecord patch files and test skeleton.
 - Added a request-level test suite run against Rails 8.0 and 8.1.
+
+## 7.0.0
+- 0.1.0 renamed for the Rails version it supports, with no code changes. Declares the `actionpack`, `activerecord` and
+  `railties` `~> 7.0.0` dependencies 0.1.0 needed but never declared. Maintained on the `7-0-stable` branch.
 
 ## 0.1.0
 - Initial release.

@@ -6,6 +6,9 @@ API responses from your resources.
 * Ruby 3.3 or newer
 * Rails 8.0 or 8.1
 
+The gem's version names the Rails version it supports. Use 8.x for Rails 8.0 and 8.1, and 7.0.0 (on the
+`7-0-stable` branch) for Rails 7.0.
+
 Rails 8.0 is not compatible with version 3 of the `json` gem, so Rails 8.0 apps should keep `json` below 3:
 
 ```ruby
@@ -143,7 +146,7 @@ you send it, and a `bin/http` command for trying each query parameter from the t
 This project is intended to be used in a Ruby on Rails project. To install, simply add this your Gemfile:
 
 ```ruby
-gem 'rails-surrender'
+gem 'rails-surrender', '~> 8.0'
 ```
 
 and bundle:
