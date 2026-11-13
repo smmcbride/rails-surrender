@@ -10,6 +10,10 @@ module Rails
           name == :id ? 0 : 1
         end
 
+        def kind
+          :attribute
+        end
+
         def preload; end
 
         def circular?(_above)
@@ -17,6 +21,8 @@ module Rails
         end
 
         def branch(**); end
+
+        def menu(**); end
 
         def write(record, into:, **)
           into[name] = record.public_send(name)

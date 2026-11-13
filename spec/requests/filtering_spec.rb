@@ -97,7 +97,7 @@ RSpec.describe 'Filtering' do
       model = Class.new(ApplicationRecord) { self.table_name = 'books' }
       entered = Queue.new
       release = Queue.new
-      allow(model).to receive(:define_surrender_column_scopes).and_wrap_original do |original|
+      allow(model).to receive(:define_surrender_generated_scopes).and_wrap_original do |original|
         entered << true
         release.pop
         original.call

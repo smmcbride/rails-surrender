@@ -9,6 +9,10 @@ module Rails
           2
         end
 
+        def kind
+          :id_list
+        end
+
         def preload
           association
         end
@@ -18,6 +22,8 @@ module Rails
         end
 
         def branch(**); end
+
+        def menu(**); end
 
         def write(record, into:, **)
           into[name] = record.public_send(name)

@@ -36,6 +36,9 @@
   `include: 'books:[pages]'`, rather than parsed lists.
 - `Rails::Surrender::QueryParamParser` is removed. Its page defaults are `Rails::Surrender::Selection::PAGE_DEFAULT`
   and `PER_PAGE_DEFAULT`. `Rails::Surrender::ModelFilterScopes` is now `Rails::Surrender::Selection::Filtering`.
+- `surrender_attributes`, `surrender_expands`, `surrender_callable_attributes` and `surrender_callable_expands` are
+  removed. `surrender_menu` lists a model's fields, with their kind and whether they render by default, along with
+  its filters and sorts.
 
 ### Fixed
 - Apps that eager load (the production default) no longer fail at boot with `undefined method 'surrenders'`. Surrender
@@ -67,8 +70,13 @@
   count.
 - A filter term with no value, such as `filter=genre`, is rejected as improperly formatted. It was reported as an
   unknown filter named after its first letter: `g is not a valid filter parameter.`
+- A sort through an association that holds many records, such as `sort=books.title` on authors, is rejected as an
+  invalid sort. It repeated each record once per associated record, and the page's total counted the repeats.
 
 ### Changed
+- Models gain `surrender_menu`: everything a request may ask of the model, read from the same rules that check
+  requests. Its fields are nested by expand and leave out expands back into a model above, its filters include those
+  the model defines, and so do its sorts.
 - A selection applies a request's filter, sort and page to a relation, and models resolve filter and sort names with
   `surrender_filter` and `surrender_sort`. `FilterBuilder`, `SortBuilder`, `PaginationBuilder` and `Render::Ids` and
   `Render::Count` are removed.

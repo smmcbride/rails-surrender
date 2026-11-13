@@ -9,6 +9,10 @@ module Rails
           3
         end
 
+        def kind
+          :expand
+        end
+
         def preload
           name
         end
@@ -20,6 +24,10 @@ module Rails
 
         def branch(asks:, above:)
           Node.new(target, asks.below(name), above + [target.base_class])
+        end
+
+        def menu(above:)
+          Menu.new(target, above: above + [target.base_class])
         end
 
         # The record at the top is never checked against the ability, only the records nested in it.

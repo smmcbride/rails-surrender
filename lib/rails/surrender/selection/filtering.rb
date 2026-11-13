@@ -29,6 +29,14 @@ module Rails
             public_send(scope, value)
           end
 
+          # The filters a request may name, each with the column it compares, or nil for a filter the model defines
+          # under a name of its own.
+          def surrender_filter_columns
+            generated = surrender_filterable? ? surrender_generated_filters : {}
+            defined = methods.grep(/\A#{FILTER_PREFIX}/o).map { |scope| scope.to_s.delete_prefix(FILTER_PREFIX) }.sort
+            generated.merge((defined - generated.keys).index_with(nil))
+          end
+
           def respond_to_missing?(name, include_private = false)
             return super unless surrender_filter_name?(name) && surrender_filter_scopes_pending?
 
@@ -70,8 +78,7 @@ module Rails
 
               begin
                 @surrender_filter_scopes_defining = true
-                define_surrender_column_scopes
-                define_surrender_datetime_scopes
+                define_surrender_generated_scopes
                 @surrender_filter_scopes_defined = true
               ensure
                 @surrender_filter_scopes_defining = false
@@ -84,27 +91,33 @@ module Rails
             self != ActiveRecord::Base && !abstract_class? && table_exists?
           end
 
-          def define_surrender_column_scopes
-            column_names.each do |column|
-              define_surrender_filter_scope(column, ->(value) { where(column => value) })
+          # An equality filter for each column, and before and after filters for each date or time column, named
+          # without its _at suffix.
+          def surrender_generated_filters
+            columns.each_with_object({}) do |column, filters|
+              filters[column.name] = column
+              next unless column.type.in?(%i[date datetime])
+
+              stem = column.name.delete_suffix('_at')
+              filters["#{stem}_before"] = column
+              filters["#{stem}_after"] = column
             end
           end
 
-          def define_surrender_datetime_scopes
-            # Scope bodies run against a relation, which can't call the model's private methods, so they close over it.
-            to_time = method(:surrender_filter_time)
-
-            columns.select { |column| column.type.in? %i[date datetime] }.map(&:name).each do |column|
-              name = column.delete_suffix('_at')
-              attribute = arel_table[column]
-
-              define_surrender_filter_scope("#{name}_before", lambda { |time|
-                where(attribute.lt(to_time.call("#{name}_before", time)))
-              })
-              define_surrender_filter_scope("#{name}_after", lambda { |time|
-                where(attribute.gt(to_time.call("#{name}_after", time)))
-              })
+          def define_surrender_generated_scopes
+            surrender_generated_filters.each do |name, column|
+              define_surrender_filter_scope(name, surrender_filter_body(name, column.name))
             end
+          end
+
+          # Scope bodies run against a relation, which can't call the model's private methods, so they close over it.
+          def surrender_filter_body(name, column)
+            return ->(value) { where(column => value) } if name == column
+
+            to_time = method(:surrender_filter_time)
+            attribute = arel_table[column]
+            comparison = name.end_with?('_before') ? :lt : :gt
+            ->(time) { where(attribute.public_send(comparison, to_time.call(name, time))) }
           end
 
           # Strict, so a value that is not a time is rejected rather than compared as NULL, which matches nothing.

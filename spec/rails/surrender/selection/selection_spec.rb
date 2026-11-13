@@ -72,6 +72,11 @@ RSpec.describe Rails::Surrender::Selection do
       expect(select_books(sort: '').headers).not_to have_key('X-Sort')
     end
 
+    it 'reject a sort through an association that holds many records, which would repeat records' do
+      expect { select_books(sort: 'chapters.title') }
+        .to raise_error(Rails::Surrender::Error, 'chapters.title is not a valid sort parameter.')
+    end
+
     it 'reject a sort that is not an attribute, an attribute of an association, or a scope' do
       expect { select_books(sort: 'author.colour') }
         .to raise_error(Rails::Surrender::Error, 'author.colour is not a valid sort parameter.')
