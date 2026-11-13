@@ -13,8 +13,11 @@ Gem::Specification.new do |s|
   s.files = Dir['{lib,test}/**/*']
   s.homepage = 'https://github.com/smmcbride/rails-surrender'
   s.license = 'GPL-3.0'
+  s.add_dependency 'actionpack', '~> 7.0.0'
+  s.add_dependency 'activerecord', '~> 7.0.0'
   s.add_dependency 'kaminari', ['= 1.2.1']
   s.add_dependency 'oj', ['= 3.13.10']
+  s.add_dependency 'railties', '~> 7.0.0'
   s.required_ruby_version = '~> 3.0'
   s.metadata = {
     'rubygems_mfa_required' => 'true'
