@@ -1,0 +1,3 @@
+# STI records render their own class's fields, even inside a parent's collection
+
+A Novel (`Novel < Book`) inside `Book.all` renders Novel's fields, not only Book's, so `GET /books` and `GET /books/:id` show the same record the same way. Issue #2 proposed the opposite fix, which was to keep rendering a collection with the relation's class and stop preloading subclass fields. We rejected that because two endpoints returning different shapes for the same record surprises API users, and because a subclass declares `surrenders` precisely to change how it renders. As a consequence, the field tree keeps a variant per record class and preloads level by level grouped by association, since a single nested `includes` on the parent relation cannot name subclass-only associations.

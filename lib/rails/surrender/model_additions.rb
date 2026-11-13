@@ -37,14 +37,38 @@ module Rails
           associations_among(surrender_callable_fields)
         end
 
-        private
-
         def surrender_fields
           @surrender_fields || DEFAULT_FIELDS
         end
 
+        # Whether a request may include the field: it renders by default or is available.
+        def surrenders?(name)
+          surrender_callable_fields.include?(name.to_sym)
+        end
+
+        # An association expands, a *_ids name of an association is an id list, and anything else is an attribute.
+        def surrender_field(name)
+          name = name.to_sym
+          if (reflection = reflect_on_association(name))
+            Fields::Expand.new(name: name, reflection: reflection)
+          elsif (association = id_list_association(name))
+            Fields::IdList.new(name: name, association: association)
+          else
+            Fields::Attribute.new(name: name)
+          end
+        end
+
+        private
+
         def surrender_available_fields
           @surrender_available_fields || []
+        end
+
+        def id_list_association(name)
+          return unless name.end_with?('_ids')
+
+          association = name.to_s.delete_suffix('_ids').pluralize.to_sym
+          association if reflect_on_association(association)
         end
 
         # A subclass may make a default of a field its superclass only made available.
