@@ -5,8 +5,9 @@ require_relative 'filter'
 
 module Rails
   module Surrender
-    # Everything a request may ask of one model: its default and available fields, nested by expand, and its filters
-    # and sorts. It is read from the same rules that check requests, so it lists exactly what a request may ask.
+    # Everything a request may ask of one model: its default and available fields, nested by expand, its filters and
+    # sorts, and the size of its pages. It is read from the same rules that check requests, so it lists exactly what a
+    # request may ask.
     class Menu
       # `above` holds the base class of every model from the top of the menu down to this one.
       def initialize(model, above: [model.base_class])
@@ -28,6 +29,10 @@ module Rails
 
       def sorts
         @model.surrender_sort_names
+      end
+
+      def page_size
+        Surrender.page_size
       end
 
       private

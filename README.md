@@ -46,6 +46,10 @@ query parameters
 | `per=20`            | Request 20 results per page        |
 | `page=2`            | Request the second page of results |
 
+A page holds 50 resources unless the request sets `per`, and never more than 100, whatever `per` asks for. Both numbers
+can be changed in the app's configuration (see Setup). `page` and `per` take positive whole numbers; anything else is
+rejected with a `Rails::Surrender::Error`.
+
 Paginated results will populate an `X-Pagination` header in the result set that provides a hash of the paginated
 details. The hash is structured like:
 
@@ -179,6 +183,18 @@ resource you wish to render. An example controller action is provided below:
 ```
 
 
+### Configuration
+
+Surrender's page sizes are set in `config/application.rb`, or per environment in `config/environments/*.rb`:
+
+```ruby
+config.surrender.default_per_page = 50   # the page size when a request doesn't set `per`
+config.surrender.max_per_page = 100      # the most a page holds, whatever `per` asks for; nil removes the limit
+```
+
+The app won't boot if the default is larger than the limit, or either isn't a positive whole number. Kaminari's own
+page size settings don't apply to surrender's pages.
+
 ### Describing what a request may ask
 
 `surrender_menu` lists everything a request may ask of a model, read from the same rules that check requests, for
@@ -189,6 +205,7 @@ menu = Book.surrender_menu
 menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own menu
 menu.filters  # each with its name and the column it compares, or nil for a filter the model defines
 menu.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
+menu.page_size.default, menu.page_size.max   # 50 and 100 unless configured
 ```
 
 ### Additional Notes

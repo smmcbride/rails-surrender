@@ -50,6 +50,14 @@ _Avoid_: Order
 One slice of a selection, set by `page` and `per`. Selections are paged unless the controller skips it.
 _Avoid_: Pagination window
 
+**Page size**:
+How many records one **page** holds: the request's `per`, or the default page size when it asks for none, capped at the **page size limit**.
+_Avoid_: Per page, limit
+
+**Page size limit**:
+The most records one **page** may hold, whatever a request asks for. An app sets it, or removes it.
+_Avoid_: Max per page
+
 **Count response**:
 The number of records a request's filters select, ignoring the page, rendered instead of the records.
 
