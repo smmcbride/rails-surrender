@@ -26,8 +26,8 @@ module Rails
           Node.new(target, asks.below(name), above + [target.base_class])
         end
 
-        def menu(above:)
-          FieldMenu.new(target, above: above + [target.base_class])
+        def menu(asks:, above:)
+          FieldMenu.new(target, asks: asks.below(name), above: above + [target.base_class])
         end
 
         # The record at the top is never checked against the ability, only the records nested in it.

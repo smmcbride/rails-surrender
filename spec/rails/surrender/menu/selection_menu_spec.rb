@@ -31,6 +31,10 @@ RSpec.describe Rails::Surrender::SelectionMenu do
     it 'is the page size the app configures' do
       expect(described_class.new(Book).page_size).to eq(Rails::Surrender.page_size)
     end
+
+    it 'is nil when the controller skips pagination' do
+      expect(described_class.new(Book, paginate: false).page_size).to be_nil
+    end
   end
 
   describe '#sorts' do
@@ -49,6 +53,18 @@ RSpec.describe Rails::Surrender::SelectionMenu do
     it 'leaves out the columns of associations that hold many records' do
       expect(sorts.grep(/\Achapters\./)).to be_empty
       expect(described_class.new(Author).sorts.grep(/\Abooks\./)).to be_empty
+    end
+  end
+
+  describe '#as_json' do
+    let(:json) { described_class.new(Book).as_json }
+
+    it 'maps each filter to the type of the column it compares' do
+      expect(json['filters']).to include('pages' => { 'type' => 'integer' }, 'long' => { 'type' => nil })
+    end
+
+    it 'lists the sorts and the page size' do
+      expect(json).to include('sorts' => described_class.new(Book).sorts, 'page' => { 'default' => 50, 'max' => 100 })
     end
   end
 end

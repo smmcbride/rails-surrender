@@ -3,6 +3,9 @@
 ## 8.0.1
 
 ### Added
+- Endpoint menus. With `config.surrender.menus = true`, a request with the `menu` query parameter gets the endpoint's
+  fields, filters, sorts and page size as JSON instead of its records, with the controller's `include:`, `exclude:`
+  and `skip_pagination` applied. `config.surrender.menu_param` renames the parameter. Menus are off by default.
 - `Menu#selection` holds a model's filters, sorts and page size, which apply only to the records at the top of a
   response. `Menu#fields` lists the model's field menu, and an expand's entry carries the field menu of its target,
   without filters or sorts no request can use. `Menu#filters`, `#sorts` and `#page_size` still work.

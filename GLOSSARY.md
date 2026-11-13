@@ -67,6 +67,9 @@ The **filters**, **sorts** and **page size** a request may use to pick a model's
 **Count response**:
 The number of records a request's filters select, ignoring the page, rendered instead of the records.
 
+**Endpoint menu**:
+What one endpoint accepts: its model's **menu** with the controller's **include** and **exclude** applied, and no **selection menu** for a single record. Rendered instead of the records when a request asks for it, like a **count response**.
+
 ### Asks
 
 **Include**:

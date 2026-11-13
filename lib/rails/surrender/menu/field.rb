@@ -9,6 +9,10 @@ module Rails
         def default?
           default
         end
+
+        def as_json(*)
+          { name: name, kind: kind, default: default, fields: menu }.compact.as_json
+        end
       end
     end
   end
