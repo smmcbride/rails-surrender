@@ -19,6 +19,11 @@
 - `count` counts every matching resource instead of only the first page.
 - `surrender nil` renders `{}`, and arrays are rendered as given, as intended.
 - A `current_ability` defined as a private controller method is now used for authorization.
+- A nested exclude such as `exclude=author:[name]` removes only the nested attributes, instead of the whole `author`.
+- Associations excluded by the request or the controller, or read only by an excluded `*_ids` attribute, are no longer
+  preloaded, saving a query for each one. A rendered `*_ids` attribute preloads only its association, not that
+  association's own expands.
+- A blank `sort` parameter is ignored instead of rejected, so API explorers that send empty fields still work.
 
 ### Changed
 - Locale files are loaded through the Railtie.

@@ -117,6 +117,12 @@ RSpec.describe 'Rendering' do
 
       expect(json).not_to have_key('author')
     end
+
+    it 'removes attributes of a default expand, keeping the expand' do
+      get "/books/#{hobbit.id}", params: { exclude: 'author:[name]' }
+
+      expect(json['author']).to eq('id' => tolkien.id)
+    end
   end
 
   describe 'controller options' do
@@ -165,6 +171,32 @@ RSpec.describe 'Rendering' do
       end
 
       expect(queries_for_authors_with_books_and_chapters).to eq(baseline)
+    end
+
+    it 'does not load default expands the request excludes' do
+      queries = capture_queries { get '/books', params: { exclude: 'author' } }
+
+      expect(queries.grep(/"authors"/)).to be_empty
+    end
+
+    it 'does not load default expands the controller excludes' do
+      queries = capture_queries { get '/books/without_author' }
+
+      expect(queries.grep(/"authors"/)).to be_empty
+    end
+
+    it 'does not load the association behind an excluded *_ids attribute' do
+      queries = capture_queries { get "/books/#{hobbit.id}", params: { exclude: 'chapter_ids' } }
+
+      expect(json).not_to have_key('chapter_ids')
+      expect(queries.grep(/"chapters"/)).to be_empty
+    end
+
+    it 'preloads an expand the request both includes and excludes, as it is rendered' do
+      queries = capture_queries { get '/books', params: { include: 'author', exclude: 'author' } }
+
+      expect(json.first).to have_key('author')
+      expect(queries.grep(/"authors"/).size).to eq(1)
     end
   end
 end
