@@ -9,5 +9,7 @@ en:
           invalid_time: "%{param} needs an ISO 8601 date or time, such as '2026-01-01' or '2026-01-01T13:30:00Z', not '%{value}'."
         include:
           not_available: "%{param} is not a valid include parameter."
+        pagination:
+          invalid: "%{param} needs a positive whole number, not '%{value}'."
         sort:
           invalid_column: "%{param} is not a valid sort parameter."

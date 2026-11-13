@@ -39,6 +39,14 @@
 - `surrender_attributes`, `surrender_expands`, `surrender_callable_attributes` and `surrender_callable_expands` are
   removed. `surrender_menu` lists a model's fields, with their kind and whether they render by default, along with
   its filters and sorts.
+- A page holds at most 100 resources, whatever `per` asks for. `config.surrender.max_per_page` changes the limit, or
+  removes it when set to `nil`, and `config.surrender.default_per_page` changes the default of 50. `X-Pagination`
+  reports the page size used, not the one requested.
+- `page` and `per` that aren't positive whole numbers are rejected with `Rails::Surrender::Error`. `per=0` and
+  `per=abc` used to raise `Kaminari::ZeroPerPageOperation`, and `per=-5` returned a page of Kaminari's default size
+  while `X-Pagination` reported -5.
+- `Rails::Surrender::Selection::PER_PAGE_DEFAULT` is removed. `surrender_menu.page_size` gives the configured default
+  and limit.
 
 ### Fixed
 - Apps that eager load (the production default) no longer fail at boot with `undefined method 'surrenders'`. Surrender

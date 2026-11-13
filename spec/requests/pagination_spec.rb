@@ -17,6 +17,20 @@ RSpec.describe 'Pagination' do
     expect(pagination).to include('page' => 1, 'per_page' => 50)
   end
 
+  it 'caps a page at the limit the app configures, 100 unless it sets one' do
+    get '/books', params: { per: 1000 }
+
+    expect(pagination).to include('per_page' => 100)
+    expect(Rails.application.config.surrender.max_per_page).to eq(100)
+  end
+
+  it 'rejects a page size that is not a positive whole number' do
+    get '/books', params: { per: 'all' }
+
+    expect(response).to have_http_status(:bad_request)
+    expect(json['error']).to eq("per needs a positive whole number, not 'all'.")
+  end
+
   it 'can be skipped by the controller' do
     get '/books/unpaginated'
 

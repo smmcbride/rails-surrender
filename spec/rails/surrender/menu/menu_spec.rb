@@ -60,6 +60,12 @@ RSpec.describe Rails::Surrender::Menu do
     end
   end
 
+  describe '#page_size' do
+    it 'is the page size the app configures' do
+      expect(Book.surrender_menu.page_size).to eq(Rails::Surrender.page_size)
+    end
+  end
+
   describe '#sorts' do
     let(:sorts) { Book.surrender_menu.sorts }
 

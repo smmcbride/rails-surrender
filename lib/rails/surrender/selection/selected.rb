@@ -8,7 +8,7 @@ module Rails
         attr_reader :records
 
         # `unpaged` holds the records before paging, which a count response counts. `sort` is the sort as requested,
-        # and `per` the page size requested, each nil when that step didn't apply.
+        # and `per` the page size used, each nil when that step didn't apply.
         def initialize(records:, unpaged: records, sort: nil, per: nil)
           @records = records
           @unpaged = unpaged

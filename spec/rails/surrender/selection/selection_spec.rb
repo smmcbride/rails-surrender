@@ -110,6 +110,28 @@ RSpec.describe Rails::Surrender::Selection do
       expect(queries.grep(/COUNT/).size).to eq(1)
     end
 
+    it 'cap a size over the limit, and report the size used' do
+      selected = described_class.new({ per: '3' }, page_size: described_class::PageSize.new(default: 1, max: 2))
+                                .apply(Book.all)
+
+      expect([selected.records.size, pagination(selected)['per_page']]).to eq([2, 2])
+    end
+
+    it 'use the default size when the request asks for none' do
+      selected = described_class.new({}, page_size: described_class::PageSize.new(default: 1, max: 2)).apply(Book.all)
+
+      expect([selected.records.size, pagination(selected)['per_page']]).to eq([1, 1])
+    end
+
+    it 'reject a page or size that is not a positive whole number' do
+      { page: %w[0 -1 abc], per: %w[0 -5 2.5] }.each do |param, values|
+        values.each do |value|
+          expect { select_books(param => value) }
+            .to raise_error(Rails::Surrender::Error, "#{param} needs a positive whole number, not '#{value}'.")
+        end
+      end
+    end
+
     it 'are skipped when the controller skips them' do
       selected = select_books(paginate: false)
 
