@@ -145,24 +145,20 @@ and bundle:
 ```
 
 ## Setup
-Surrender setup begins in your models. To enable rendering of models with this gem, the `surrenders` method is invoked
-on your models with a list of attributes and associations to be rendered, along with (optional) additional attributes
-or associations that API clients an request. The following keys are allowed, along with the list of attributes for that 
-key.
-
-* `attributes`: A list of model attributes to be rendered by default.
-* `expands`: A list of model associations to be rendered by default.  An association is typically defined as a
-Rails ActiveRecord `has_many` or `belongs_to` or similar method call.
-* `available_attributes`: A list of model attributes that can be rendered with the `include` query parameter.
-* `available_expands`: A list of model associations that can be rendered with the `include` query parameter.
+Surrender setup begins in your models. To enable rendering of a model with this gem, call `surrenders` on it with the
+fields to render by default, and optionally `available:` with the fields API clients can add with the `include` query
+parameter. A field can be any model attribute or method, a `*_ids` attribute such as `chapter_ids`, or an association
+such as one defined with `has_many` or `belongs_to`. Surrender renders associations as nested resources, using the
+associated model's own `surrenders` fields, and renders every other field as an attribute.
 
 An example invocation of the `surrenders` method is provided below:
 ```ruby
-  surrenders attributes: [:id, :title, :description, :status],
-             available_attributes: [:created_at, :updated_at],
-             expands: [:activities],
-             available_expands: [:user]
+  surrenders :id, :title, :description, :status, :activities,
+             available: [:created_at, :updated_at, :user]
 ```
+
+A model that doesn't call `surrenders` renders its `id` and `created_at`. A subclass that calls `surrenders` adds its
+fields to those of its superclass.
 
 To invoke surrender in your controllers, simply end your controller action with a call to `surrender` with the 
 resource you wish to render. An example controller action is provided below:

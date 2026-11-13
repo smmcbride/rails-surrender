@@ -1,9 +1,8 @@
 # frozen_string_literal: true
 
 class Author < ApplicationRecord
-  has_many :books
+  # Declared before the association it names, so specs cover fields being sorted when read.
+  surrenders :id, :name, available: %i[created_at book_ids books]
 
-  surrenders attributes: %i[id name],
-             available_attributes: %i[created_at book_ids],
-             available_expands: [:books]
+  has_many :books
 end
