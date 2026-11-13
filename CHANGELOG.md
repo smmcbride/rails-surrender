@@ -16,6 +16,18 @@
 - The `_before` and `_after` filters accept only ISO 8601 dates and times, such as `'2022-01-01'` or
   `'2022-01-01T13:30:00Z'`, and raise `Rails::Surrender::Error` for anything else. Previously a value that wasn't a
   time was compared as `NULL` and silently matched nothing.
+- The `reload:` option of `surrender` is removed, and passing it raises `ArgumentError`. It only existed to fetch a
+  record again so its associations could be preloaded; Surrender now preloads the record it is given. An association
+  the controller already loaded or changed in memory therefore renders as it is in memory, not as stored.
+- Fields render in a fixed order: `id` first, then other attributes, then `*_ids` id lists, then expands. Within each
+  group, default fields come first, then those the controller includes, then those the request includes.
+- An STI record inside a collection renders its own class's fields, as it does when rendered alone. A `Novel` in
+  `Book.all` used to render only `Book`'s fields.
+- A polymorphic association listed as a field raises `ArgumentError` when the response is built. It already failed,
+  with `Polymorphic associations do not support computing the class`; support is tracked in
+  [#6](https://github.com/smmcbride/rails-surrender/issues/6).
+- A name the controller includes that is not an association or `*_ids` id list renders as an attribute, so a name the
+  model can't answer raises `NoMethodError` instead of being silently skipped.
 
 ### Fixed
 - Apps that eager load (the production default) no longer fail at boot with `undefined method 'surrenders'`. Surrender
@@ -37,8 +49,15 @@
 - A blank `sort` parameter is ignored instead of rejected, so API explorers that send empty fields still work.
 - Quoted values in `filter`, `include` and `exclude` are kept as given. A space was inserted after every colon and
   comma, even inside quotes, so `'13:30'` arrived as `'13: 30'`.
+- Preloading always matches what renders. Collections of STI models no longer preload subclass associations they
+  never render ([#2](https://github.com/smmcbride/rails-surrender/issues/2)), and associations only a subclass renders are
+  preloaded instead of loaded once per record.
+- A request include that is not available, at any depth, is rejected before any query runs.
+- A `belongs_to` with no record renders `null` whatever the ability allows.
 
 ### Changed
+- Surrender works out the fields a request renders once, as a field tree, and both preloading and rendering read it.
+  `Render::Configuration` and the classes under `Render::Resource` are replaced by `Rails::Surrender::FieldTree`.
 - Locale files are loaded through the Railtie.
 - Removed the unused ActiveRecord patch files and test skeleton.
 - Added a request-level test suite run against Rails 8.0 and 8.1.

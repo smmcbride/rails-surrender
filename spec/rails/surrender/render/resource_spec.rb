@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe Rails::Surrender::Render::Resource do
-  subject(:data) { described_class.new(resource: resource, ability: nil, config: nil).parse.data }
+  subject(:data) { described_class.new(resource: resource, ability: nil).parse.data }
 
   context 'when the resource is nil' do
     let(:resource) { nil }

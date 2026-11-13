@@ -14,7 +14,7 @@ module Rails
         super
       end
 
-      def surrender(resource, status: 200, reload: true, include: [], exclude: [])
+      def surrender(resource, status: 200, include: [], exclude: [])
         resource = filter resource if parsed_query_params.filter?
 
         if parsed_query_params.sort?
@@ -32,18 +32,9 @@ module Rails
                              elsif parsed_query_params.ids?
                                Render::Ids.new(resource).parse
                              else
-                               config = Render::Configuration.new(
-                                 resource_class: resource_class(resource),
-                                 reload_resource: reload,
-                                 user_exclude: parsed_query_params.exclude,
-                                 user_include: parsed_query_params.include,
-                                 ctrl_exclude: exclude,
-                                 ctrl_include: include
-                               )
-
-                               Render::Resource.new(resource: resource,
-                                                    ability: ability,
-                                                    config: config).parse
+                               asks = { include: parsed_query_params.include, exclude: parsed_query_params.exclude,
+                                        controller_include: include, controller_exclude: exclude }
+                               Render::Resource.new(resource: resource, ability: ability, asks: asks).parse
                              end
 
         # Allows the calling method to decorate the response data before returning the result
@@ -59,10 +50,6 @@ module Rails
         return current_ability if respond_to?(:current_ability, true)
 
         DefaultAbility.new
-      end
-
-      def resource_class(resource)
-        resource.try(:klass) || resource.class
       end
 
       def skip_pagination

@@ -25,4 +25,10 @@ ActiveRecord::Schema.define do
     t.integer :position
     t.timestamps
   end
+
+  create_table :reviews do |t|
+    t.references :reviewable, polymorphic: true
+    t.string :body
+    t.timestamps
+  end
 end

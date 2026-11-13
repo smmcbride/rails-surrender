@@ -110,6 +110,9 @@ additional values on nested resources. Examples below:
 | `include=work_orders:[activities]`                                        | include the `work_orders` and it's `activities` association             |
 | `include=created_at, work_orders:[created_at, activities:[created_at ]]`  | combine various attributes and associations and nested results          |
 
+Each resource renders its `id` first, then its other attributes, then its `*_ids` lists, then its associations. Within
+each group, the model's default fields come first, then those the controller includes, then those the request includes.
+
 
 ### Excluding
 Exclude (and exclude below) provide an easy but powerful mechanism for crafting the shape of the response. Excluding 
@@ -158,7 +161,11 @@ An example invocation of the `surrenders` method is provided below:
 ```
 
 A model that doesn't call `surrenders` renders its `id` and `created_at`. A subclass that calls `surrenders` adds its
-fields to those of its superclass.
+fields to those of its superclass, and its records render them wherever they appear, including in a collection of the
+superclass.
+
+Surrender can't expand a polymorphic `belongs_to`, because it works out the fields to render before any record loads,
+when the association has no class yet. Listing one as a field raises `ArgumentError`.
 
 To invoke surrender in your controllers, simply end your controller action with a call to `surrender` with the 
 resource you wish to render. An example controller action is provided below:
@@ -173,10 +180,9 @@ resource you wish to render. An example controller action is provided below:
 
 ### Additional Notes
 
-Surrender prevents circular renderings by tracking the history of nested objects. If you have a `Book` model, 
-for example, that _expands_ it's associated `Author` model, and the `Author` model expands it's associated `Books` then 
-surrender will stop expanding the associations when it recognized that it has already rendered a parent resource of the
-same class as the requested child association.
+Surrender prevents circular renderings. If a `Book` model, for example, expands its `Author`, and `Author` expands its
+`books`, then surrender leaves out the `books` of an author rendered inside a book. It never expands an association
+into a model already rendered above it, and it treats an STI subclass as its base class when checking.
 
 Surrender prevents un-authorized access to associated resources by invoking the `current_ability` rule-set from the 
 CanCanCan gem, if it is used in your Rails project. Any controller method named `current_ability`, public or private, 

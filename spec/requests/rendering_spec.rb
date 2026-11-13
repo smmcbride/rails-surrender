@@ -37,9 +37,16 @@ RSpec.describe 'Rendering' do
     end
 
     it 'adds available expands' do
-      get "/authors/#{tolkien.id}", params: { include: 'books' }
+      get "/authors/#{le_guin.id}", params: { include: 'books' }
 
-      expect(json['books']).to eq([{ 'id' => hobbit.id, 'title' => 'The Hobbit', 'genre' => 'fantasy' }])
+      expect(json['books']).to include({ 'id' => essays.id, 'title' => 'Dancing at the Edge', 'genre' => 'essays' })
+    end
+
+    it 'renders each STI record in a collection with its own class’s fields' do
+      get '/books'
+
+      expect(json.find { |book| book['id'] == hobbit.id }).to include('chapter_ids', 'author')
+      expect(json.find { |book| book['id'] == essays.id }.keys).to contain_exactly('id', 'title', 'genre')
     end
 
     it 'adds attributes to nested resources' do
@@ -129,13 +136,13 @@ RSpec.describe 'Rendering' do
     it 'applies the include and exclude given by the controller' do
       get '/books/featured'
 
-      expect(json.first.keys).to contain_exactly('id', 'title', 'pages')
+      expect(json.find { |book| book['id'] == essays.id }.keys).to contain_exactly('id', 'title', 'pages')
     end
 
     it 'lets the request include what the controller excluded' do
       get '/books/featured', params: { include: 'genre' }
 
-      expect(json.first.keys).to contain_exactly('id', 'title', 'genre', 'pages')
+      expect(json.find { |book| book['id'] == essays.id }.keys).to contain_exactly('id', 'title', 'genre', 'pages')
     end
 
     it 'lets the controller decorate the rendered data' do
