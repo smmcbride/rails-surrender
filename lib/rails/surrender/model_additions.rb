@@ -29,7 +29,7 @@ module Rails
           @surrender_available_fields || []
         end
 
-        # Everything a request may ask of the model: its fields, filters and sorts.
+        # Everything a request may ask of the model: its field menu and its selection menu.
         def surrender_menu
           Menu.new(self)
         end

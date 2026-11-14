@@ -7,7 +7,8 @@ API responses from your resources.
 * Rails 8.0 or 8.1
 
 The gem's version names the Rails version it supports. Use 8.x for Rails 8.0 and 8.1, and 7.0.0 (on the
-`7-0-stable` branch) for Rails 7.0.
+`7-0-stable` branch) for Rails 7.0. The major version is the Rails major version. Every other change, including new
+features, goes in the patch digit, unless a release changes which Rails minor versions it supports.
 
 Rails 8.0 is not compatible with version 3 of the `json` gem, so Rails 8.0 apps should keep `json` below 3:
 
@@ -134,6 +135,61 @@ To list only the ids of the resources, exclude every other field they render by 
 `exclude=title,genre,author`.
 
 
+### Menus
+An endpoint can describe what it accepts. With menus turned on (see [Configuration](#configuration)), the `menu` query
+parameter renders the endpoint's _menu_ instead of its resources: the fields it renders by default and those a request
+may include, nested by expand, and, for a collection, the filters, sorts and page size a request may use.
+
+```
+GET /books?menu
+```
+
+```json
+{
+  "fields": [
+    { "name": "id",          "kind": "attribute", "default": true },
+    { "name": "title",       "kind": "attribute", "default": true },
+    { "name": "pages",       "kind": "attribute", "default": false },
+    { "name": "chapter_ids", "kind": "id_list",   "default": false },
+    { "name": "author",      "kind": "expand",    "default": false,
+      "fields": [
+        { "name": "id",   "kind": "attribute", "default": true },
+        { "name": "name", "kind": "attribute", "default": true }
+      ] }
+  ],
+  "selection": {
+    "filters": {
+      "title":            { "type": "string" },
+      "published_before": { "type": "datetime" },
+      "long":             { "type": null }
+    },
+    "sorts": ["id", "title", "author.name", "title_length"],
+    "page": { "default": 50, "max": 100 }
+  }
+}
+```
+
+- `fields` are listed in the order they render. Only an expand has `fields` of its own, and expands that would loop
+  back into a model above are left out, as they never render.
+- The controller's own `include:` and `exclude:` are applied, so a field the controller includes is listed as a
+  default. A field the controller excludes is listed as available if a request may still include it.
+- Each filter's `type` is the Rails type of the column it compares, such as `datetime` for the `_before` and `_after`
+  filters, which take ISO 8601 times. A filter the model defines itself has a `null` type.
+- `selection` is `null` for an endpoint that renders a single record, and `page` is `null` when the controller skips
+  pagination. An endpoint that surrenders a hash, an array or `nil` has `null` for both parts, as no ask applies to it.
+- A menu lists names and types only. The syntax of each ask is described in the sections above.
+
+A menu ignores every other ask in the request, and loads no records. The controller still runs its action, its
+callbacks and anything before `surrender`, so a member route needs an id that exists, and the menu is only as visible
+as the endpoint itself. A block passed to `surrender` doesn't decorate a menu, so every endpoint's menu has the same
+shape.
+
+Abilities aren't applied to a menu. They decide which records render inside a field, not which fields a model offers,
+so a menu may list an expand whose records the current user can't read.
+
+An STI subclass renders its own fields. The menu of a collection lists its base model's fields, so records of a
+subclass may render more default fields than it lists. A request may only include fields the base model offers.
+
 ## Example Project
 A full working example project is provided in the [rails-surrender-demo](https://github.com/smmcbride/rails-surrender-demo)
 repository. It provides several models and endpoints demonstrating a working configuration of `rails-surrender`. The
@@ -195,21 +251,36 @@ config.surrender.default_per_page = 50   # the page size when a request doesn't 
 config.surrender.max_per_page = 100      # the most a page holds, whatever `per` asks for; nil removes the limit
 ```
 
+Menus are off unless the app turns them on, as they show the app's column names and the names of its own filters and
+sorts. Set them per environment to keep them out of production:
+
+```ruby
+config.surrender.menus = true            # answer the menu query parameter; false by default
+config.surrender.menu_param = 'menu'     # the name it's asked with, such as 'docs'
+```
+
+While menus are off, `menu` is an ordinary query parameter, so an app's own parameter of that name works as usual. The
+app won't boot if `menu_param` is blank or is the name of a parameter surrender already reads, such as `count`.
+
 The app won't boot if the default is larger than the limit, or either isn't a positive whole number. Kaminari's own
 page size settings don't apply to surrender's pages.
 
 ### Describing what a request may ask
 
-`surrender_menu` lists everything a request may ask of a model, read from the same rules that check requests, for
-documentation or an API explorer like the demo's:
+`surrender_menu` lists everything a request may ask of a model, read from the same rules that check requests. Unlike
+an endpoint's [menu](#menus), it doesn't know a controller's `include:` and `exclude:`:
 
 ```ruby
 menu = Book.surrender_menu
-menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own menu
-menu.filters  # each with its name and the column it compares, or nil for a filter the model defines
-menu.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
-menu.page_size.default, menu.page_size.max   # 50 and 100 unless configured
+menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own field menu
+menu.selection.filters  # each with its name and the column it compares, or nil for a filter the model defines
+menu.selection.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
+menu.selection.page_size.default, menu.selection.page_size.max   # 50 and 100 unless configured
 ```
+
+The fields make up the model's field menu, which applies wherever the model renders, including inside an expand. The
+filters, sorts and page size make up its selection menu, which applies only to the records at the top of a response.
+`menu.filters`, `menu.sorts` and `menu.page_size` answer from the selection menu too.
 
 ### Additional Notes
 
@@ -220,7 +291,8 @@ into a model already rendered above it, and it treats an STI subclass as its bas
 Surrender prevents un-authorized access to associated resources by invoking the `current_ability` rule-set from the 
 CanCanCan gem, if it is used in your Rails project. Any controller method named `current_ability`, public or private, 
 that returns an object responding to `can?(:read, record)` is used the same way. If neither is present it will allow 
-full access to associated resources.
+full access to associated resources. A nested record the ability can't read renders as `null`, as a missing one does,
+and is left out of a nested collection.
 
 ## Development
 

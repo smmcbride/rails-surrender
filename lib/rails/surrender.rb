@@ -7,8 +7,16 @@ module Rails
       # The page size the app configures with config.surrender.default_per_page and max_per_page, set at boot.
       attr_writer :page_size
 
+      # Whether the app answers requests for endpoint menus, and the param they ask with, from config.surrender.menus
+      # and menu_param, set at boot.
+      attr_writer :menu_param
+
       def page_size
         @page_size ||= Selection::PageSize.new
+      end
+
+      def menu_param
+        @menu_param ||= MenuParam.new
       end
     end
   end

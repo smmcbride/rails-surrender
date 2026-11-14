@@ -25,4 +25,8 @@ class BooksController < ApplicationController
   def decorated
     surrender(Book.all) { |data| { books: data } }
   end
+
+  def summary
+    surrender({ shelves: 3 })
+  end
 end

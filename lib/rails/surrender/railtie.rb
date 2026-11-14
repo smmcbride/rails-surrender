@@ -8,11 +8,19 @@ module Rails
       config.surrender = ActiveSupport::OrderedOptions.new
       config.surrender.default_per_page = 50
       config.surrender.max_per_page = 100
+      config.surrender.menus = false
+      config.surrender.menu_param = 'menu'
 
       # Built once at boot, so a page size setting that makes no sense stops the app from starting.
       initializer 'rails_surrender.page_size' do |app|
         Rails::Surrender.page_size = Rails::Surrender::Selection::PageSize.new(
           default: app.config.surrender.default_per_page, max: app.config.surrender.max_per_page
+        )
+      end
+
+      initializer 'rails_surrender.menu_param' do |app|
+        Rails::Surrender.menu_param = Rails::Surrender::MenuParam.new(
+          enabled: app.config.surrender.menus, name: app.config.surrender.menu_param
         )
       end
 

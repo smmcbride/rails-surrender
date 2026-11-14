@@ -9,7 +9,18 @@ module Rails
         super
       end
 
-      def surrender(resource, status: 200, include: [], exclude: [])
+      def surrender(resource, status: 200, include: [], exclude: [], &)
+        # Before the selection, which would parse and check the other asks a menu ignores.
+        if Surrender.menu_param.asked_in?(query_params)
+          render_endpoint_menu(resource, include: include, exclude: exclude)
+        else
+          render_selected(resource, status: status, include: include, exclude: exclude, &)
+        end
+      end
+
+      private
+
+      def render_selected(resource, status:, include:, exclude:)
         selection = Selection.new(query_params, paginate: @will_paginate)
         selected = selection.apply(resource)
         response.headers.merge!(selected.headers)
@@ -28,7 +39,11 @@ module Rails
         render(json: surrender_response.json_data, status: status)
       end
 
-      private
+      # Never decorated by the block, so every endpoint's menu has the same shape.
+      def render_endpoint_menu(resource, include:, exclude:)
+        menu = EndpointMenu.new(resource, include: include, exclude: exclude, paginate: @will_paginate)
+        render(json: Response.new(data: menu.as_json).json_data)
+      end
 
       def ability
         # Apps commonly override CanCanCan's current_ability as a private method.
