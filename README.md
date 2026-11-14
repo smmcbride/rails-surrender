@@ -291,7 +291,8 @@ into a model already rendered above it, and it treats an STI subclass as its bas
 Surrender prevents un-authorized access to associated resources by invoking the `current_ability` rule-set from the 
 CanCanCan gem, if it is used in your Rails project. Any controller method named `current_ability`, public or private, 
 that returns an object responding to `can?(:read, record)` is used the same way. If neither is present it will allow 
-full access to associated resources.
+full access to associated resources. A nested record the ability can't read renders as `null`, as a missing one does,
+and is left out of a nested collection.
 
 ## Development
 
