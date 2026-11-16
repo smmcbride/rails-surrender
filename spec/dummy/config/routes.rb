@@ -8,6 +8,7 @@ Rails.application.routes.draw do
       get :featured
       get :decorated
       get :without_author
+      get :summary
     end
   end
   resources :chapters, only: %i[index]

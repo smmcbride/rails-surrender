@@ -16,5 +16,6 @@ module Dummy
     config.secret_key_base = 'dummy'
     config.hosts.clear
     config.action_dispatch.show_exceptions = :none
+    config.surrender.menus = true
   end
 end

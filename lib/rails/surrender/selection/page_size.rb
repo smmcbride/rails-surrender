@@ -20,6 +20,10 @@ module Rails
           max ? [requested, max].min : requested
         end
 
+        def as_json(*)
+          to_h.as_json
+        end
+
         private
 
         def check_positive_whole_number(setting, value)

@@ -1,5 +1,19 @@
 # Changelog
 
+## 8.0.1
+
+### Added
+- Endpoint menus. With `config.surrender.menus = true`, a request with the `menu` query parameter gets the endpoint's
+  fields, filters, sorts and page size as JSON instead of its records, with the controller's `include:`, `exclude:`
+  and `skip_pagination` applied. `config.surrender.menu_param` renames the parameter. Menus are off by default.
+
+### Changed
+- A singular expand whose record the ability can't read renders as `null`, as a missing record does. It used to be
+  left out of the response, so a client couldn't rely on a field's key being present.
+- `Menu#selection` holds a model's filters, sorts and page size, which apply only to the records at the top of a
+  response. `Menu#fields` lists the model's field menu, and an expand's entry carries the field menu of its target,
+  without filters or sorts no request can use. `Menu#filters`, `#sorts` and `#page_size` still work.
+
 ## 8.0.0
 The version now names the Rails version it supports: 8.0.0 supports Rails 8.0 and 8.1. It follows 7.0.0.
 

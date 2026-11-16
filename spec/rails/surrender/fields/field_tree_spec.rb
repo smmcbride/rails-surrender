@@ -132,12 +132,12 @@ RSpec.describe Rails::Surrender::FieldTree do
       expect(rendered[:chapters].pluck(:title)).to contain_exactly('An Unexpected Party', 'Roast Mutton')
     end
 
-    it 'leaves out a nested record the ability cannot read' do
+    it 'renders a nested record the ability cannot read as nil' do
       cannot_read_books = Struct.new(:unused) { def can?(_action, subject) = !subject.is_a?(Book) }.new
 
       rendered = described_class.new(Chapter).render(unexpected_party, ability: cannot_read_books)
 
-      expect(rendered).not_to have_key(:book)
+      expect(rendered).to include(book: nil)
     end
 
     it 'loads each association in one query across the classes that render it' do
