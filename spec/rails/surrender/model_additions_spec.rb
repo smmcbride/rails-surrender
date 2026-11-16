@@ -32,7 +32,7 @@ RSpec.describe Rails::Surrender::ModelAdditions do
     end
 
     it 'makes anything else an attribute' do
-      expect(Book.surrender_field(:pages)).to eq(Rails::Surrender::Fields::Attribute.new(name: :pages, model: Book))
+      expect(Book.surrender_field(:pages)).to eq(Rails::Surrender::Fields::Attribute.new(name: :pages, type: :integer))
     end
   end
 end

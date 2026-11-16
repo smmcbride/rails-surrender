@@ -47,7 +47,7 @@ module Rails
           elsif (association = id_list_association(name))
             Fields::IdList.new(name: name, association: association)
           else
-            Fields::Attribute.new(name: name, model: self)
+            Fields::Attribute.new(name: name, type: type_for_attribute(name).type)
           end
         end
 
