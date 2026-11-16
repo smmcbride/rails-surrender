@@ -4,13 +4,14 @@ API responses from your resources.
 
 ## Requirements
 * Ruby 3.3 or newer
-* Rails 8.0 or 8.1
+* Rails 7.0 through 8.1
 
-The gem's version names the Rails version it supports. Use 8.x for Rails 8.0 and 8.1, and 7.0.0 (on the
-`7-0-stable` branch) for Rails 7.0. The major version is the Rails major version. Every other change, including new
-features, goes in the patch digit, unless a release changes which Rails minor versions it supports.
+8.x is the current version and supports Rails 7.0 through 8.1. Its major version changes only with breaking
+changes. Every other change, including new features, goes in the patch digit, unless a release changes which Rails
+minor versions it supports. 7.0.0, on the `7-0-stable` branch, is the earlier version for Rails 7.0, and gets no new
+features.
 
-Rails 8.0 is not compatible with version 3 of the `json` gem, so Rails 8.0 apps should keep `json` below 3:
+Rails 8.0 and earlier are not compatible with version 3 of the `json` gem, so apps on them should keep `json` below 3:
 
 ```ruby
 gem 'json', '< 3'

@@ -3,6 +3,9 @@
 ## 8.0.1
 
 ### Added
+- Supports Rails 7.0, 7.1 and 7.2 as well as 8.0 and 8.1, with no change in behaviour. Ruby 3.3 or newer is still
+  required. The version no longer names the Rails version it supports: 8.x is the current version, for Rails 7.0
+  through 8.1.
 - Endpoint menus. With `config.surrender.menus = true`, a request with the `menu` query parameter gets the endpoint's
   fields, filters, sorts and page size as JSON instead of its records, with the controller's `include:`, `exclude:`
   and `skip_pagination` applied. `config.surrender.menu_param` renames the parameter. Menus are off by default.
