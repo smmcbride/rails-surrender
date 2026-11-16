@@ -1,6 +1,6 @@
 # Changelog
 
-## 8.0.1
+## 8.1.0
 
 ### Added
 - Supports Rails 7.0, 7.1 and 7.2 as well as 8.0 and 8.1, with no change in behaviour. Ruby 3.3 or newer is still
