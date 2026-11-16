@@ -30,11 +30,11 @@ RSpec.describe 'Endpoint menus' do
       author = json['fields'].find { |field| field['name'] == 'author' }
 
       expect(author).to eq(
-        'name' => 'author', 'kind' => 'expand', 'default' => false,
-        'fields' => [{ 'name' => 'id', 'kind' => 'attribute', 'default' => true },
-                     { 'name' => 'name', 'kind' => 'attribute', 'default' => true },
-                     { 'name' => 'created_at', 'kind' => 'attribute', 'default' => false },
-                     { 'name' => 'book_ids', 'kind' => 'id_list', 'default' => false }]
+        'name' => 'author', 'type' => 'object', 'default' => false,
+        'fields' => [{ 'name' => 'id', 'type' => 'integer', 'default' => true },
+                     { 'name' => 'name', 'type' => 'string', 'default' => true },
+                     { 'name' => 'created_at', 'type' => 'datetime', 'default' => false },
+                     { 'name' => 'book_ids', 'type' => 'array', 'default' => false }]
       )
     end
 

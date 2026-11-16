@@ -9,8 +9,9 @@ module Rails
           3
         end
 
-        def kind
-          :expand
+        # The JSON shape it renders as: an array of records for a collection, or one record.
+        def type
+          reflection.collection? ? :array : :object
         end
 
         def preload

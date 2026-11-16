@@ -4,14 +4,15 @@ module Rails
   module Surrender
     module Fields
       # A field rendered as the value its record returns for it.
-      Attribute = Data.define(:name) do
+      Attribute = Data.define(:name, :model) do
         # Every record leads with its id, wherever the model or the asks list it.
         def rank
           name == :id ? 0 : 1
         end
 
-        def kind
-          :attribute
+        # The Rails type of the attribute, such as :string or :datetime, or nil for a method the model defines.
+        def type
+          model.type_for_attribute(name).type
         end
 
         def preload; end

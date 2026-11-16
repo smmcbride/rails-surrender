@@ -9,8 +9,8 @@ module Rails
           2
         end
 
-        def kind
-          :id_list
+        def type
+          :array
         end
 
         def preload

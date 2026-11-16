@@ -3,7 +3,7 @@
 RSpec.describe Rails::Surrender::FieldMenu do
   def outline(menu)
     menu.fields.map do |field|
-      entry = [field.name, field.kind, field.default?]
+      entry = [field.name, field.type, field.default?]
       field.menu ? entry + [outline(field.menu)] : entry
     end
   end
@@ -11,14 +11,14 @@ RSpec.describe Rails::Surrender::FieldMenu do
   describe '#fields' do
     it 'lists default then available fields, in render order, with the menu below each expand' do
       expect(outline(described_class.new(Author))).to eq(
-        [[:id, :attribute, true], [:name, :attribute, true], [:created_at, :attribute, false],
-         [:book_ids, :id_list, false],
-         [:books, :expand, false,
-          [[:id, :attribute, true], [:title, :attribute, true], [:genre, :attribute, true],
-           [:pages, :attribute, false], [:published_at, :attribute, false], [:created_at, :attribute, false],
-           [:chapter_ids, :id_list, false],
-           [:chapters, :expand, false, [[:id, :attribute, true], [:title, :attribute, true],
-                                        [:position, :attribute, true]]]]]]
+        [[:id, :integer, true], [:name, :string, true], [:created_at, :datetime, false],
+         [:book_ids, :array, false],
+         [:books, :array, false,
+          [[:id, :integer, true], [:title, :string, true], [:genre, :string, true],
+           [:pages, :integer, false], [:published_at, :datetime, false], [:created_at, :datetime, false],
+           [:chapter_ids, :array, false],
+           [:chapters, :array, false, [[:id, :integer, true], [:title, :string, true],
+                                       [:position, :integer, true]]]]]]
       )
     end
 
@@ -27,6 +27,18 @@ RSpec.describe Rails::Surrender::FieldMenu do
 
       expect(book_fields).not_to include(:prequel)
       expect(book_fields).to include(:author)
+    end
+
+    it 'types a singular expand as an object' do
+      book = described_class.new(Chapter).fields.find { |field| field.name == :book }
+
+      expect(book.type).to eq(:object)
+    end
+
+    it 'has no type for an attribute the model answers with a method rather than a column' do
+      menu = described_class.new(Author, asks: Rails::Surrender::Fields::Asks.new(controller_include: [:to_param]))
+
+      expect(menu.fields.find { |field| field.name == :to_param }.type).to be_nil
     end
 
     it 'rejects a polymorphic expand' do
@@ -72,12 +84,19 @@ RSpec.describe Rails::Surrender::FieldMenu do
   end
 
   describe '#as_json' do
-    it 'lists each field’s name, kind and default, nesting the fields of an expand' do
+    it 'lists each field’s name, type and default, nesting the fields of an expand' do
       json = described_class.new(Chapter).as_json
 
-      expect(json.last).to eq('name' => 'book', 'kind' => 'expand', 'default' => true,
+      expect(json.last).to eq('name' => 'book', 'type' => 'object', 'default' => true,
                               'fields' => described_class.new(Book, above: [Chapter, Book]).as_json)
-      expect(json.first).to eq('name' => 'id', 'kind' => 'attribute', 'default' => true)
+      expect(json.first).to eq('name' => 'id', 'type' => 'integer', 'default' => true)
+    end
+
+    it 'keeps a null type, so every field has the same keys' do
+      json = described_class.new(Author, asks: Rails::Surrender::Fields::Asks.new(controller_include: [:to_param]))
+                            .as_json
+
+      expect(json).to include('name' => 'to_param', 'type' => nil, 'default' => true)
     end
   end
 end
