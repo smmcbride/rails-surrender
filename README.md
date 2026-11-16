@@ -6,15 +6,13 @@ API responses from your resources.
 * Ruby 3.3 or newer
 * Rails 7.0 through 8.1
 
-Every supported combination passes the full suite for 8.1.0:
+CI runs the full suite on these Ruby and Rails versions:
 
 | Ruby | Rails 7.0 | Rails 7.1 | Rails 7.2 | Rails 8.0 | Rails 8.1 |
 |------|:---------:|:---------:|:---------:|:---------:|:---------:|
 | 3.3  | ✅        | ✅        | ✅        | ✅        | ✅        |
-| 3.4  | ✅        | ✅        | ✅        | ✅        | ✅        |
-| 4.0  | ✅        | ✅        | ✅        | ✅        | ✅        |
-
-CI runs every Ruby on Rails 8, and Rails 7 on Ruby 3.3.
+| 3.4  |           |           |           | ✅        | ✅        |
+| 4.0  |           |           |           | ✅        | ✅        |
 
 8.x is the current version and supports Rails 7.0 through 8.1. Its major version changes only with breaking
 changes. Every other change, including new features, goes in the patch digit, unless a release changes which Rails
