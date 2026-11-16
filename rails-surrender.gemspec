@@ -15,11 +15,11 @@ Gem::Specification.new do |s|
   s.homepage = 'https://github.com/smmcbride/rails-surrender'
   s.license = 'GPL-3.0-only'
   s.required_ruby_version = '>= 3.3'
-  s.add_dependency 'actionpack', '>= 8.0', '< 9'
-  s.add_dependency 'activerecord', '>= 8.0', '< 9'
+  s.add_dependency 'actionpack', '>= 7.0', '< 9'
+  s.add_dependency 'activerecord', '>= 7.0', '< 9'
   s.add_dependency 'kaminari', '~> 1.2'
   s.add_dependency 'oj', '~> 3.13'
-  s.add_dependency 'railties', '>= 8.0', '< 9'
+  s.add_dependency 'railties', '>= 7.0', '< 9'
   s.metadata = {
     'changelog_uri' => 'https://github.com/smmcbride/rails-surrender/blob/main/CHANGELOG.md',
     'rubygems_mfa_required' => 'true',
