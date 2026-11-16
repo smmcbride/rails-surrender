@@ -147,15 +147,17 @@ GET /books?menu
 ```json
 {
   "fields": [
-    { "name": "id",          "kind": "attribute", "default": true },
-    { "name": "title",       "kind": "attribute", "default": true },
-    { "name": "pages",       "kind": "attribute", "default": false },
-    { "name": "chapter_ids", "kind": "id_list",   "default": false },
-    { "name": "author",      "kind": "expand",    "default": false,
+    { "name": "id",          "type": "integer", "default": true },
+    { "name": "title",       "type": "string",  "default": true },
+    { "name": "pages",       "type": "integer", "default": false },
+    { "name": "chapter_ids", "type": "array",   "default": false },
+    { "name": "author",      "type": "object",  "default": false,
       "fields": [
-        { "name": "id",   "kind": "attribute", "default": true },
-        { "name": "name", "kind": "attribute", "default": true }
-      ] }
+        { "name": "id",   "type": "integer", "default": true },
+        { "name": "name", "type": "string",  "default": true }
+      ] },
+    { "name": "chapters",    "type": "array",   "default": false,
+      "fields": [ ... ] }
   ],
   "selection": {
     "filters": {
@@ -171,6 +173,9 @@ GET /books?menu
 
 - `fields` are listed in the order they render. Only an expand has `fields` of its own, and expands that would loop
   back into a model above are left out, as they never render.
+- Each field's `type` is what it renders as. An attribute's is the Rails type of its column, such as `string` or
+  `datetime`, or `null` for a method the model defines. An `_ids` list is an `array`, and an expand is an `object`, or
+  an `array` of objects for a collection association.
 - The controller's own `include:` and `exclude:` are applied, so a field the controller includes is listed as a
   default. A field the controller excludes is listed as available if a request may still include it.
 - Each filter's `type` is the Rails type of the column it compares, such as `datetime` for the `_before` and `_after`
@@ -272,7 +277,7 @@ an endpoint's [menu](#menus), it doesn't know a controller's `include:` and `exc
 
 ```ruby
 menu = Book.surrender_menu
-menu.fields   # each with its name, kind (:attribute, :id_list or :expand), default?, and an expand's own field menu
+menu.fields   # each with its name, type (such as :string, :array or :object), default?, and an expand's field menu
 menu.selection.filters  # each with its name and the column it compares, or nil for a filter the model defines
 menu.selection.sorts    # ['id', 'title', ..., 'author.name', 'title_length']
 menu.selection.page_size.default, menu.selection.page_size.max   # 50 and 100 unless configured

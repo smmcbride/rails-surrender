@@ -10,6 +10,9 @@
 ### Changed
 - A singular expand whose record the ability can't read renders as `null`, as a missing record does. It used to be
   left out of the response, so a client couldn't rely on a field's key being present.
+- `Menu#fields` gives each field a `type` instead of a `kind`. An attribute's type is the Rails type of its column, or
+  `nil` for a method the model defines, an id list's is `:array`, and an expand's is `:object`, or `:array` for a
+  collection association, matching the JSON it renders as.
 - `Menu#selection` holds a model's filters, sorts and page size, which apply only to the records at the top of a
   response. `Menu#fields` lists the model's field menu, and an expand's entry carries the field menu of its target,
   without filters or sorts no request can use. `Menu#filters`, `#sorts` and `#page_size` still work.

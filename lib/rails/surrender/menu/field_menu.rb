@@ -14,11 +14,11 @@ module Rails
         @above = above
       end
 
-      # In the order fields render, with defaults before available fields within each kind. Expands back into a model
+      # In the order fields render, with defaults before available fields within each group. Expands back into a model
       # above are left out, as they never render.
       def fields
         @fields ||= offered_fields.map do |field|
-          Field.new(name: field.name, kind: field.kind, default: default?(field.name),
+          Field.new(name: field.name, type: field.type, default: default?(field.name),
                     menu: field.menu(asks: @asks, above: @above))
         end
       end

@@ -4,8 +4,8 @@ RSpec.describe Rails::Surrender::Menu do
   let(:menu) { Book.surrender_menu }
 
   it 'lists the fields of the model’s field menu' do
-    expect(menu.fields.map { |field| [field.name, field.kind, field.default?] })
-      .to eq(Rails::Surrender::FieldMenu.new(Book).fields.map { |field| [field.name, field.kind, field.default?] })
+    expect(menu.fields.map { |field| [field.name, field.type, field.default?] })
+      .to eq(Rails::Surrender::FieldMenu.new(Book).fields.map { |field| [field.name, field.type, field.default?] })
   end
 
   it 'holds the model’s selection menu' do
