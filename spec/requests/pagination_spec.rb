@@ -31,7 +31,13 @@ RSpec.describe 'Pagination' do
     expect(json['error']).to eq("per needs a positive whole number, not 'all'.")
   end
 
-  it 'can be skipped by the controller' do
+  it 'can be skipped by the controller as the action runs' do
+    get '/books/skips_pagination'
+
+    expect(response.headers).not_to have_key('X-Pagination')
+  end
+
+  it 'can be skipped by what the controller declares for the action' do
     get '/books/unpaginated'
 
     expect(response.headers).not_to have_key('X-Pagination')

@@ -8,8 +8,11 @@ class ChaptersController < ApplicationController
     end
   end
 
+  # Named for chapters but surrenders books, so it declares its model for the app menu.
+  surrender_options :index, model: Book, include: [:chapters]
+
   def index
-    surrender Book.all, include: [:chapters]
+    surrender Book.all
   end
 
   private

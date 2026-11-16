@@ -1,8 +1,9 @@
 # frozen_string_literal: true
 
+require_relative 'app_menu'
 require_relative 'endpoint_menu'
 require_relative 'field_menu'
-require_relative 'menu_param'
+require_relative 'menu_route'
 require_relative 'selection_menu'
 
 module Rails

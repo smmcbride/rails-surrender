@@ -14,10 +14,10 @@ CI runs the full suite on these Ruby and Rails versions:
 | 3.4  |           |           |           | ✅        | ✅        |
 | 4.0  |           |           |           | ✅        | ✅        |
 
-8.x is the current version and supports Rails 7.0 through 8.1. Its major version changes only with breaking
-changes. Every other change, including new features, goes in the patch digit, unless a release changes which Rails
-minor versions it supports. 7.0.0, on the `7-0-stable` branch, is the earlier version for Rails 7.0, and gets no new
-features.
+8.x is the current version and supports Rails 7.0 through 8.1. A release that changes which Rails minor versions it
+supports, or changes a feature introduced earlier in 8.x, goes in the minor digit. Every other change, including new
+features, goes in the patch digit. 7.0.0, on the `7-0-stable` branch, is the earlier version for Rails 7.0, and gets
+no new features.
 
 Rails 8.0 and earlier are not compatible with version 3 of the `json` gem, so apps on them should keep `json` below 3:
 
@@ -145,64 +145,103 @@ To list only the ids of the resources, exclude every other field they render by 
 
 
 ### Menus
-An endpoint can describe what it accepts. With menus turned on (see [Configuration](#configuration)), the `menu` query
-parameter renders the endpoint's _menu_ instead of its resources: the fields it renders by default and those a request
-may include, nested by expand, and, for a collection, the filters, sorts and page size a request may use.
+An app can describe what each of its endpoints accepts. With menus turned on (see [Configuration](#configuration)),
+`GET /surrender_menu` lists every `GET` route whose action surrenders a model, and for each one the fields it renders
+by default and those a request may include, nested by expand, and, for a collection, the filters, sorts and page size a
+request may use.
 
 ```
-GET /books?menu
+GET /surrender_menu
 ```
 
 ```json
 {
-  "fields": [
-    { "name": "id",          "type": "integer", "default": true },
-    { "name": "title",       "type": "string",  "default": true },
-    { "name": "pages",       "type": "integer", "default": false },
-    { "name": "chapter_ids", "type": "array",   "default": false },
-    { "name": "author",      "type": "object",  "default": false,
+  "endpoints": [
+    {
+      "verb": "GET",
+      "path": "/books",
       "fields": [
-        { "name": "id",   "type": "integer", "default": true },
-        { "name": "name", "type": "string",  "default": true }
-      ] },
-    { "name": "chapters",    "type": "array",   "default": false,
-      "fields": [ ... ] }
-  ],
-  "selection": {
-    "filters": {
-      "title":            { "type": "string" },
-      "published_before": { "type": "datetime" },
-      "long":             { "type": null }
+        { "name": "id",          "type": "integer", "default": true },
+        { "name": "title",       "type": "string",  "default": true },
+        { "name": "pages",       "type": "integer", "default": false },
+        { "name": "chapter_ids", "type": "array",   "default": false },
+        { "name": "author",      "type": "object",  "default": false,
+          "fields": [
+            { "name": "id",   "type": "integer", "default": true },
+            { "name": "name", "type": "string",  "default": true }
+          ] },
+        { "name": "chapters",    "type": "array",   "default": false,
+          "fields": [ ... ] }
+      ],
+      "selection": {
+        "filters": {
+          "title":            { "type": "string" },
+          "published_before": { "type": "datetime" },
+          "long":             { "type": null }
+        },
+        "sorts": ["id", "title", "author.name", "title_length"],
+        "page": { "default": 50, "max": 100 }
+      }
     },
-    "sorts": ["id", "title", "author.name", "title_length"],
-    "page": { "default": 50, "max": 100 }
-  }
+    { "verb": "GET", "path": "/books/{id}", "fields": [ ... ], "selection": null }
+  ]
 }
 ```
 
+- `endpoints` are listed in the order the app draws its routes. A path names its segments as `{id}`.
 - `fields` are listed in the order they render. Only an expand has `fields` of its own, and expands that would loop
   back into a model above are left out, as they never render.
 - Each field's `type` is what it renders as. An attribute's is the Rails type of its column, such as `string` or
   `datetime`, or `null` for a method the model defines. An `_ids` list is an `array`, and an expand is an `object`, or
   an `array` of objects for a collection association.
-- The controller's own `include:` and `exclude:` are applied, so a field the controller includes is listed as a
-  default. A field the controller excludes is listed as available if a request may still include it.
 - Each filter's `type` is the Rails type of the column it compares, such as `datetime` for the `_before` and `_after`
   filters, which take ISO 8601 times. A filter the model defines itself has a `null` type.
-- `selection` is `null` for an endpoint that renders a single record, and `page` is `null` when the controller skips
-  pagination. An endpoint that surrenders a hash, an array or `nil` has `null` for both parts, as no ask applies to it.
+- `selection` is `null` for an endpoint that renders a single record, and `page` is `null` when the controller declares
+  the action unpaginated.
 - A menu lists names and types only. The syntax of each ask is described in the sections above.
 
-A menu ignores every other ask in the request, and loads no records. The controller still runs its action, its
-callbacks and anything before `surrender`, so a member route needs an id that exists, and the menu is only as visible
-as the endpoint itself. A block passed to `surrender` doesn't decorate a menu, so every endpoint's menu has the same
-shape.
+The menu is worked out from the app's routes and its controllers, without running any action or loading any record.
+For each route it infers:
 
-Abilities aren't applied to a menu. They decide which records render inside a field, not which fields a model offers,
-so a menu may list an expand whose records the current user can't read.
+- **the model** from the controller's name: `BooksController` surrenders `Book`. A route whose controller has no model
+  of its name is left out.
+- **whether it's a collection** from the action: `index` is a collection and `show` a single record. Any other action is
+  a single record when its path has an `:id`, as a member route's does, and a collection otherwise.
 
-An STI subclass renders its own fields. The menu of a collection lists its base model's fields, so records of a
-subclass may render more default fields than it lists. A request may only include fields the base model offers.
+A controller declares what the menu can't infer, or what the action surrenders with, with `surrender_options`:
+
+```ruby
+class BooksController < ApplicationController
+  surrender_options :featured, include: [:pages], exclude: [:genre]
+  surrender_options :export, paginate: false
+  surrender_options :bestseller, collection: false   # a collection route that finds one record
+  surrender_options :summary, menu: false            # surrenders a hash, so it's left off the menu
+
+  def featured
+    surrender Book.all   # renders with the include and exclude declared above
+  end
+end
+```
+
+| option        | effect                                                                    | default                   |
+|---------------|---------------------------------------------------------------------------|---------------------------|
+| `include:`    | fields the action renders by default, as `surrender`'s `include:` does    | `[]`                      |
+| `exclude:`    | fields the action leaves out by default, as `surrender`'s `exclude:` does | `[]`                      |
+| `paginate:`   | `false` to render the whole selection, as `skip_pagination` does          | `true`                    |
+| `model:`      | the model the action surrenders                                           | named like the controller |
+| `collection:` | whether the action surrenders a collection or a single record             | inferred from the route   |
+| `menu:`       | `false` to leave the action off the menu                                  | `true`                    |
+
+`surrender` applies the `include:`, `exclude:` and `paginate:` an action declares, so the menu always matches what the
+action renders. It still takes `include:` and `exclude:` of its own, and `skip_pagination` still works, but the menu
+can't see what an action decides as it runs, so those don't reach it. Declare them instead.
+
+The menu is served by surrender's own controller, so the app's authentication and abilities don't apply to it, and it
+lists every endpoint whether or not the client may call it. Abilities decide which records render inside a field, not
+which fields a model offers, so a menu may also list an expand whose records the current user can't read.
+
+An STI subclass renders its own fields. The menu lists the fields of the model an endpoint surrenders, so records of a
+subclass may render more default fields than it lists. A request may only include fields that model offers.
 
 ## Example Project
 A full working example project is provided in the [rails-surrender-demo](https://github.com/smmcbride/rails-surrender-demo)
@@ -265,16 +304,17 @@ config.surrender.default_per_page = 50   # the page size when a request doesn't 
 config.surrender.max_per_page = 100      # the most a page holds, whatever `per` asks for; nil removes the limit
 ```
 
-Menus are off unless the app turns them on, as they show the app's column names and the names of its own filters and
-sorts. Set them per environment to keep them out of production:
+[Menus](#menus) are off unless the app turns them on, as they show the app's routes, its column names and the names of
+its own filters and sorts, to anyone who can reach the menu path. Set them per environment to keep them out of
+production:
 
 ```ruby
-config.surrender.menus = true            # answer the menu query parameter; false by default
-config.surrender.menu_param = 'menu'     # the name it's asked with, such as 'docs'
+config.surrender.menus = true                    # serve the app menu; false by default
+config.surrender.menu_path = '/surrender_menu'   # the path it's served at, such as '/api/docs'
 ```
 
-While menus are off, `menu` is an ordinary query parameter, so an app's own parameter of that name works as usual. The
-app won't boot if `menu_param` is blank or is the name of a parameter surrender already reads, such as `count`.
+While menus are off, surrender draws no route, so an app's own route at the menu path works as usual. The app won't
+boot if `menu_path` doesn't start with `/`, or if it still sets `menu_param`, which 8.2.0 removed.
 
 The app won't boot if the default is larger than the limit, or either isn't a positive whole number. Kaminari's own
 page size settings don't apply to surrender's pages.
@@ -282,7 +322,7 @@ page size settings don't apply to surrender's pages.
 ### Describing what a request may ask
 
 `surrender_menu` lists everything a request may ask of a model, read from the same rules that check requests. Unlike
-an endpoint's [menu](#menus), it doesn't know a controller's `include:` and `exclude:`:
+an endpoint's [menu](#menus), it doesn't know what a controller declares with `surrender_options`:
 
 ```ruby
 menu = Book.surrender_menu

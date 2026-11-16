@@ -68,7 +68,15 @@ The **filters**, **sorts** and **page size** a request may use to pick a model's
 The number of records a request's filters select, ignoring the page, rendered instead of the records.
 
 **Endpoint menu**:
-What one endpoint accepts: its model's **menu** with the controller's **include** and **exclude** applied, and no **selection menu** for a single record. Rendered instead of the records when a request asks for it, like a **count response**.
+What one endpoint accepts: its model's **menu** with the **action options** applied, and no **selection menu** for a single record.
+
+**App menu**:
+The **endpoint menu** of every `GET` route whose action surrenders a model, worked out from the routes and **action options** without running any action, and served at the menu path.
+_Avoid_: Route menu, API docs, schema
+
+**Action options**:
+What a controller declares one action surrenders with, through `surrender_options`: its **include**, **exclude** and whether it's paged, which `surrender` applies, and, where the route can't tell, its model and whether it surrenders a collection.
+_Avoid_: Endpoint declaration, controller options
 
 ### Asks
 

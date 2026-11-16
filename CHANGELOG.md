@@ -1,5 +1,27 @@
 # Changelog
 
+## 8.2.0
+
+### Changed
+- Menus are served from one route instead of on each endpoint. With `config.surrender.menus = true`,
+  `GET /surrender_menu` lists the menu of every `GET` route whose action surrenders a model, as
+  `{ "endpoints": [{ "verb", "path", "fields", "selection" }] }`. Each endpoint's `fields` and `selection` are shaped
+  as the `?menu` response was. `config.surrender.menu_path` moves the route.
+- The `menu` query param is removed, and a request that sends it renders the records as usual.
+  `config.surrender.menu_param` is removed, and an app that still sets it won't boot. Ask for `/surrender_menu`
+  instead, and find the endpoint by its path, such as `/books/{id}`.
+- The menu of a single record lists the fields of the model its controller is named for, or declares, rather than of
+  the record's own STI class, as it no longer loads the record.
+- The menu's routes are served by surrender's own controller, so the app's authentication no longer applies to them,
+  and a member route no longer needs the id of a record that exists.
+- The versioning policy puts changes to a feature introduced earlier in 8.x in the minor digit, as this release does.
+
+### Added
+- `surrender_options` declares what an action surrenders with: `include:`, `exclude:` and `paginate:`, which
+  `surrender` applies, and `model:`, `collection:` and `menu:`, which tell the app menu what it can't infer from the
+  route. The app menu infers the model from the controller's name, and a collection from an `index` action, or another
+  action whose path has no `:id`.
+
 ## 8.1.0
 
 ### Added

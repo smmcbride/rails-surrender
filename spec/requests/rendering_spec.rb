@@ -133,7 +133,7 @@ RSpec.describe 'Rendering' do
   end
 
   describe 'controller options' do
-    it 'applies the include and exclude given by the controller' do
+    it 'applies the include and exclude the controller declares for the action' do
       get '/books/featured'
 
       expect(json.find { |book| book['id'] == essays.id }.keys).to contain_exactly('id', 'title', 'pages')
@@ -143,6 +143,12 @@ RSpec.describe 'Rendering' do
       get '/books/featured', params: { include: 'genre' }
 
       expect(json.find { |book| book['id'] == essays.id }.keys).to contain_exactly('id', 'title', 'genre', 'pages')
+    end
+
+    it 'applies the exclude the action passes as it surrenders' do
+      get '/books/without_author'
+
+      expect(json.find { |book| book['id'] == hobbit.id }).not_to have_key('author')
     end
 
     it 'lets the controller decorate the rendered data' do

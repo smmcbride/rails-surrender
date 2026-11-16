@@ -3,20 +3,15 @@
 module Rails
   # Base namespace for the entire project
   module Surrender
+    # Loaded when its route is first asked for, as it needs ActionController::API, which an app may never load.
+    autoload :MenusController, 'rails/surrender/menu/menus_controller'
+
     class << self
       # The page size the app configures with config.surrender.default_per_page and max_per_page, set at boot.
       attr_writer :page_size
 
-      # Whether the app answers requests for endpoint menus, and the param they ask with, from config.surrender.menus
-      # and menu_param, set at boot.
-      attr_writer :menu_param
-
       def page_size
         @page_size ||= Selection::PageSize.new
-      end
-
-      def menu_param
-        @menu_param ||= MenuParam.new
       end
     end
   end
@@ -27,6 +22,8 @@ require 'oj'
 
 require 'rails/surrender/default_ability'
 require 'rails/surrender/controller_additions'
+require 'rails/surrender/endpoints/action_options'
+require 'rails/surrender/endpoints/endpoint'
 require 'rails/surrender/exceptions'
 require 'rails/surrender/fields/field_tree'
 require 'rails/surrender/menu/menu'

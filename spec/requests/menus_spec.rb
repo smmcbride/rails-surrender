@@ -1,33 +1,46 @@
 # frozen_string_literal: true
 
-RSpec.describe 'Endpoint menus' do
+RSpec.describe 'The app menu' do
   # Each top-level field's name and whether it renders by default.
   def defaults_of(fields)
     fields.to_h { |field| [field['name'], field['default']] }
   end
 
-  def ask_for_menu(path, params = {})
-    count_queries { get path, params: { menu: '' }.merge(params) }
+  def endpoint(path)
+    json['endpoints'].find { |endpoint| endpoint['path'] == path }
+  end
+
+  before { get '/surrender_menu' }
+
+  it 'is worked out from the routes, loading no records' do
+    expect(count_queries { get '/surrender_menu' }).to eq(0)
+  end
+
+  it 'lists each GET route whose action surrenders a model, in the order they are drawn' do
+    expect(json['endpoints'].pluck('path')).to eq(
+      %w[/authors /authors/{id} /books/bestseller /books/unpaginated /books/skips_pagination /books/featured
+         /books/decorated /books/without_author /books/{id}/cover /books /books/{id} /chapters]
+    )
   end
 
   describe 'a collection' do
-    it 'lists the fields, filters, sorts and page size, loading no records' do
-      expect(ask_for_menu('/books')).to eq(0)
+    it 'lists the fields, filters, sorts and page size' do
+      books = endpoint('/books')
 
-      expect(defaults_of(json['fields'])).to eq(
+      expect(books['verb']).to eq('GET')
+      expect(defaults_of(books['fields'])).to eq(
         'id' => true, 'title' => true, 'genre' => true, 'pages' => false, 'published_at' => false,
         'created_at' => false, 'chapter_ids' => false, 'author' => false, 'chapters' => false
       )
-      expect(json['selection']['filters']).to include('title' => { 'type' => 'string' },
-                                                      'published_before' => { 'type' => 'datetime' },
-                                                      'long' => { 'type' => nil })
-      expect(json['selection']['sorts']).to include('title', 'author.name', 'title_length')
-      expect(json['selection']['page']).to eq('default' => 50, 'max' => 100)
+      expect(books['selection']['filters']).to include('title' => { 'type' => 'string' },
+                                                       'published_before' => { 'type' => 'datetime' },
+                                                       'long' => { 'type' => nil })
+      expect(books['selection']['sorts']).to include('title', 'author.name', 'title_length')
+      expect(books['selection']['page']).to eq('default' => 50, 'max' => 100)
     end
 
     it 'nests the field menu of each expand, without filters or sorts' do
-      ask_for_menu('/books')
-      author = json['fields'].find { |field| field['name'] == 'author' }
+      author = endpoint('/books')['fields'].find { |field| field['name'] == 'author' }
 
       expect(author).to eq(
         'name' => 'author', 'type' => 'object', 'default' => false,
@@ -38,95 +51,45 @@ RSpec.describe 'Endpoint menus' do
       )
     end
 
-    it 'makes what the controller includes a default, and what it excludes available' do
-      ask_for_menu('/books/featured')
-
-      expect(defaults_of(json['fields'])).to include('pages' => true, 'genre' => false)
+    it 'makes what the controller declares it includes a default, and what it excludes available' do
+      expect(defaults_of(endpoint('/books/featured')['fields'])).to include('pages' => true, 'genre' => false)
     end
 
-    it 'keeps a field the controller excludes, as a request may still include it' do
-      ask_for_menu('/books/without_author')
-
-      expect(defaults_of(json['fields'])).to include('author' => false)
+    it 'has no page size when the controller declares the action unpaginated' do
+      expect(endpoint('/books/unpaginated')['selection']).to include('page' => nil)
     end
 
-    it 'has no page size when the controller skips pagination' do
-      ask_for_menu('/books/unpaginated')
+    it "can't see what the action decides as it runs" do
+      expect(endpoint('/books/skips_pagination')['selection']['page']).to eq('default' => 50, 'max' => 100)
+      expect(defaults_of(endpoint('/books/without_author')['fields'])).to include('author' => false)
+    end
 
-      expect(json['selection']).to include('page' => nil)
+    it 'uses the model the controller declares, over the one named like the controller' do
+      chapters = endpoint('/chapters')
+
+      expect(defaults_of(chapters['fields'])).to include('title' => true, 'chapters' => true)
+      expect(chapters['selection']['sorts']).to include('author.name')
     end
   end
 
   describe 'a single record' do
-    it 'lists its fields and no selection, loading only the record the controller finds' do
-      expect(ask_for_menu("/books/#{essays.id}")).to eq(1)
+    it 'lists its fields and no selection' do
+      book = endpoint('/books/{id}')
 
-      expect(json['selection']).to be_nil
-      expect(defaults_of(json['fields'])).to include('title' => true, 'author' => false)
+      expect(book['selection']).to be_nil
+      expect(defaults_of(book['fields'])).to include('title' => true, 'author' => false)
     end
 
-    it 'lists the fields of its own STI class' do
-      ask_for_menu("/books/#{hobbit.id}")
-
-      expect(defaults_of(json['fields'])).to include('chapter_ids' => true, 'author' => true)
-    end
-  end
-
-  it 'has neither part for a resource with no model' do
-    ask_for_menu('/books/summary')
-
-    expect(json).to eq('fields' => nil, 'selection' => nil)
-  end
-
-  it 'is not decorated by the controller' do
-    ask_for_menu('/books/decorated')
-
-    expect(json.keys).to eq(%w[fields selection])
-  end
-
-  it 'ignores the other asks, even ones that would be refused' do
-    ask_for_menu('/books', filter: 'nonsense:1', sort: 'nonsense', include: 'nonsense', count: '', per: 1)
-
-    expect(response).to have_http_status(:ok)
-    expect(json.keys).to eq(%w[fields selection])
-    expect(response.headers).not_to include('X-Sort', 'X-Pagination')
-  end
-
-  context 'with menus off' do
-    around do |example|
-      configured = Rails::Surrender.menu_param
-      Rails::Surrender.menu_param = Rails::Surrender::MenuParam.new(enabled: false)
-      example.run
-    ensure
-      Rails::Surrender.menu_param = configured
+    it 'is told from a collection by the id in its path' do
+      expect(endpoint('/books/{id}/cover')['selection']).to be_nil
     end
 
-    it 'renders the records, leaving the param to the app' do
-      get '/books', params: { menu: '' }
-
-      expect(titles).to contain_exactly('The Hobbit', 'A Wizard of Earthsea', 'Dancing at the Edge')
+    it 'is one when the controller declares it, whatever its path' do
+      expect(endpoint('/books/bestseller')['selection']).to be_nil
     end
   end
 
-  context 'with the param renamed' do
-    around do |example|
-      configured = Rails::Surrender.menu_param
-      Rails::Surrender.menu_param = Rails::Surrender::MenuParam.new(enabled: true, name: 'docs')
-      example.run
-    ensure
-      Rails::Surrender.menu_param = configured
-    end
-
-    it 'answers the new name' do
-      get '/books', params: { docs: '' }
-
-      expect(json.keys).to eq(%w[fields selection])
-    end
-
-    it 'leaves the old name to the app' do
-      get '/books', params: { menu: '' }
-
-      expect(titles).to include('The Hobbit')
-    end
+  it 'leaves out an action the controller takes off the menu' do
+    expect(endpoint('/books/summary')).to be_nil
   end
 end
